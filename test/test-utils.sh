@@ -6,6 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+DATA_DIR="$SCRIPT_DIR/data"
 BINARY="${REPO_DIR}/minibwa"
 PASS=0
 FAIL=0
@@ -21,7 +22,7 @@ echo ""
 
 # Create test index
 echo "Setting up test index..."
-"$BINARY" index "$SCRIPT_DIR/chrM-human.fa.gz" /tmp/mb_utils_test > /dev/null 2>&1
+"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_utils_test > /dev/null 2>&1
 if [ ! -f "/tmp/mb_utils_test.mbw" ]; then
     echo "ERROR: Failed to create test index"
     exit 1
@@ -58,7 +59,7 @@ fi
 
 # Test 7: fastmap command
 echo "[UT 7] fastmap - test seeding strategies"
-"$BINARY" fastmap /tmp/mb_utils_test "$SCRIPT_DIR/chrM-read_1.fa.gz" > /tmp/mb_fastmap.out 2>/dev/null
+"$BINARY" fastmap /tmp/mb_utils_test "$DATA_DIR/chrM-read_1.fa.gz" > /tmp/mb_fastmap.out 2>/dev/null
 if [ -f "/tmp/mb_fastmap.out" ]; then
     pass "fastmap runs without error"
     # fastmap should produce some output about seeding

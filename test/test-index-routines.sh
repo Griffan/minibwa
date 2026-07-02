@@ -6,6 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+DATA_DIR="$SCRIPT_DIR/data"
 BINARY="${REPO_DIR}/minibwa"
 PASS=0
 FAIL=0
@@ -21,7 +22,7 @@ echo ""
 
 # Test 1: fa2bit - convert FASTA to 2-bit
 echo "[IR 1] fa2bit: convert FASTA to long-2bit format"
-"$BINARY" fa2bit "$SCRIPT_DIR/chrM-human.fa.gz" /tmp/mb_ir_fa2bit > /dev/null 2>&1
+"$BINARY" fa2bit "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_ir_fa2bit > /dev/null 2>&1
 if [ -f "/tmp/mb_ir_fa2bit" ]; then
     pass "fa2bit creates output file"
     # Check file has reasonable size (chrM is ~16.5kb, should be small)
@@ -63,7 +64,7 @@ fi
 echo "[IR 4] genraw: generate BWT from .pac"
 # First create .pac file using fa2bit then genbwt (which creates .pac internally)
 # Actually, genraw takes a .pac file. Let's create one via the main index pipeline.
-"$BINARY" index "$SCRIPT_DIR/chrM-human.fa.gz" /tmp/mb_ir_genraw > /dev/null 2>&1
+"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_ir_genraw > /dev/null 2>&1
 if [ -f "/tmp/mb_ir_genraw.pac" ]; then
     "$BINARY" genraw /tmp/mb_ir_genraw.pac /tmp/mb_ir_genraw_out > /dev/null 2>&1
     if [ -f "/tmp/mb_ir_genraw_out.bwt" ] || [ -f "/tmp/mb_ir_genraw_out.occ" ]; then
@@ -90,7 +91,7 @@ rm -f /tmp/mb_ir_genraw* 2>/dev/null || true
 # Test 5: raw2bwt - recode bwtgen raw BWT
 echo "[IR 5] raw2bwt: recode bwtgen raw BWT"
 # raw2bwt takes output from genraw and produces .mbz
-"$BINARY" index "$SCRIPT_DIR/chrM-human.fa.gz" /tmp/mb_ir_raw2bwt > /dev/null 2>&1
+"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_ir_raw2bwt > /dev/null 2>&1
 if [ -f "/tmp/mb_ir_raw2bwt.pac" ]; then
     "$BINARY" genraw /tmp/mb_ir_raw2bwt.pac /tmp/mb_ir_raw2bwt_out > /dev/null 2>&1
     # raw2bwt reads .bwt and .occ from genraw output
@@ -113,7 +114,7 @@ rm -f /tmp/mb_ir_raw2bwt* /tmp/mb_ir_raw2bwt_out* /tmp/mb_ir_raw2bwt_final* 2>/d
 
 # Test 6: gensa - generate sampled SA from BWT
 echo "[IR 6] gensa: generate sampled SA from BWT"
-"$BINARY" index "$SCRIPT_DIR/chrM-human.fa.gz" /tmp/mb_ir_gensa > /dev/null 2>&1
+"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_ir_gensa > /dev/null 2>&1
 if [ -f "/tmp/mb_ir_gensa.mbw" ]; then
     "$BINARY" gensa /tmp/mb_ir_gensa.mbw > /dev/null 2>&1
     # gensa may modify .mbw in place or create a new file
@@ -125,13 +126,13 @@ rm -f /tmp/mb_ir_gensa* 2>/dev/null || true
 
 # Test 7: Verify index round-trip (index -> map -> getref -> compare)
 echo "[IR 7] Index round-trip: reference extraction"
-"$BINARY" index "$SCRIPT_DIR/chrM-human.fa.gz" /tmp/mb_ir_roundtrip > /dev/null 2>&1
+"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_ir_roundtrip > /dev/null 2>&1
 if [ -f "/tmp/mb_ir_roundtrip.l2b" ]; then
     # Extract reference from .l2b
     "$BINARY" getref /tmp/mb_ir_roundtrip.l2b > /tmp/mb_ir_ref_extracted.fa 2>/dev/null
     if [ -f "/tmp/mb_ir_ref_extracted.fa" ]; then
         # Compare first line of FASTA header
-        orig_header=$(zcat "$SCRIPT_DIR/chrM-human.fa.gz" | head -1)
+        orig_header=$(zcat "$DATA_DIR/chrM-human.fa.gz" | head -1)
         extract_header=$(head -1 /tmp/mb_ir_ref_extracted.fa)
         if [ "$orig_header" = "$extract_header" ]; then
             pass "getref extracts correct FASTA header"
@@ -152,7 +153,7 @@ skip "separate index format may differ from main index"
 
 # Test 9: genbwt with specific thread count
 echo "[IR 9] genbwt with explicit thread count"
-"$BINARY" fa2bit "$SCRIPT_DIR/chrM-human.fa.gz" /tmp/mb_ir_t1 > /dev/null 2>&1
+"$BINARY" fa2bit "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_ir_t1 > /dev/null 2>&1
 if [ -f "/tmp/mb_ir_t1" ]; then
     "$BINARY" genbwt /tmp/mb_ir_t1 /tmp/mb_ir_t1.mbw > /dev/null 2>&1
     if [ -f "/tmp/mb_ir_t1.mbw" ]; then
@@ -167,9 +168,9 @@ rm -f /tmp/mb_ir_t1* 2>/dev/null || true
 
 # Test 10: Low-memory index produces usable output
 echo "[IR 10] Low-memory index produces usable mapping"
-"$BINARY" index -l "$SCRIPT_DIR/chrM-human.fa.gz" /tmp/mb_ir_lm > /dev/null 2>&1
+"$BINARY" index -l "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_ir_lm > /dev/null 2>&1
 if [ -f "/tmp/mb_ir_lm.l2b" ] && [ -f "/tmp/mb_ir_lm.mbw" ]; then
-    "$BINARY" map /tmp/mb_ir_lm "$SCRIPT_DIR/chrM-read_1.fa.gz" > /tmp/mb_ir_lm_out.sam 2>/dev/null
+    "$BINARY" map /tmp/mb_ir_lm "$DATA_DIR/chrM-read_1.fa.gz" > /tmp/mb_ir_lm_out.sam 2>/dev/null
     if [ -f "/tmp/mb_ir_lm_out.sam" ]; then
         lines=$(wc -l < /tmp/mb_ir_lm_out.sam)
         if [ "$lines" -gt 2 ]; then

@@ -6,6 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+DATA_DIR="$SCRIPT_DIR/data"
 BINARY="${REPO_DIR}/minibwa"
 API_DIR="$REPO_DIR/api-test"
 PASS=0
@@ -35,7 +36,7 @@ fi
 
 # Create test index for API
 echo "[API 2] Setting up test index"
-"$BINARY" index "$SCRIPT_DIR/chrM-human.fa.gz" /tmp/mb_api_test > /dev/null 2>&1
+"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_api_test > /dev/null 2>&1
 if [ -f "/tmp/mb_api_test.l2b" ] && [ -f "/tmp/mb_api_test.mbw" ]; then
     pass "Test index created for API tests"
 else
@@ -45,7 +46,7 @@ fi
 
 # Test ex-one.c (single read alignment)
 echo "[API 3] mbmap-one: single read alignment"
-"$API_DIR/mbmap-one" /tmp/mb_api_test "$SCRIPT_DIR/chrM-read_1.fa.gz" > /tmp/mb_api_one_out.txt 2>/dev/null
+"$API_DIR/mbmap-one" /tmp/mb_api_test "$DATA_DIR/chrM-read_1.fa.gz" > /tmp/mb_api_one_out.txt 2>/dev/null
 if [ -s "/tmp/mb_api_one_out.txt" ]; then
     pass "mbmap-one produced output"
     line_count=$(wc -l < /tmp/mb_api_one_out.txt)
@@ -60,7 +61,7 @@ fi
 
 # Test ex-batch.c (batch alignment)
 echo "[API 4] mbmap-batch: batch alignment"
-"$API_DIR/mbmap-batch" /tmp/mb_api_test "$SCRIPT_DIR/chrM-read_1.fa.gz" > /tmp/mb_api_batch_out.txt 2>/dev/null
+"$API_DIR/mbmap-batch" /tmp/mb_api_test "$DATA_DIR/chrM-read_1.fa.gz" > /tmp/mb_api_batch_out.txt 2>/dev/null
 if [ -s "/tmp/mb_api_batch_out.txt" ]; then
     pass "mbmap-batch produced output"
     line_count=$(wc -l < /tmp/mb_api_batch_out.txt)
