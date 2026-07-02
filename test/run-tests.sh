@@ -21,7 +21,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 pass() { PASS=$((PASS + 1)); echo -e "  ${GREEN}PASS${NC}: $1"; }
-fail() { FAIL=$((FAIL + 1)); echo -e "  ${RED}FAIL${NC}: $1"; }
+fail() { FAIL=$((FAIL + 1)); if [ -n "${2:-}" ]; then echo -e "  ${RED}FAIL${NC}: $1 ($2)"; else echo -e "  ${RED}FAIL${NC}: $1"; fi }
 skip() { SKIP=$((SKIP + 1)); echo -e "  ${YELLOW}SKIP${NC}: $1"; }
 
 assert_exit_code() {
@@ -35,19 +35,27 @@ assert_exit_code() {
 
 assert_contains() {
     local desc="$1" pattern="$2" file="$3"
+    if [ ! -f "$file" ]; then
+        fail "$desc" "File does not exist: $file"
+        return
+    fi
     if grep -q "$pattern" "$file"; then
         pass "$desc"
     else
-        fail "$desc" "Pattern '$pattern' not found in output"
+        fail "$desc" "Pattern '$pattern' not found in file"
     fi
 }
 
 assert_not_contains() {
     local desc="$1" pattern="$2" file="$3"
+    if [ ! -f "$file" ]; then
+        fail "$desc" "File does not exist: $file"
+        return
+    fi
     if ! grep -q "$pattern" "$file"; then
         pass "$desc"
     else
-        fail "$desc" "Pattern '$pattern' should not be in output"
+        fail "$desc" "Pattern '$pattern' should not be in file"
     fi
 }
 
@@ -62,6 +70,10 @@ assert_file_exists() {
 
 assert_line_count() {
     local desc="$1" expected="$2" file="$3"
+    if [ ! -f "$file" ]; then
+        fail "$desc" "File does not exist: $file"
+        return
+    fi
     local actual
     actual=$(wc -l < "$file")
     if [ "$actual" -ge "$expected" ]; then
@@ -73,7 +85,7 @@ assert_line_count() {
 
 assert_output_contains() {
     local desc="$1" pattern="$2" output="$3"
-    if echo "$output" | grep -q "$pattern"; then
+    if echo "$output" | grep -Eq "$pattern"; then
         pass "$desc"
     else
         fail "$desc" "Pattern '$pattern' not found in output: $(echo "$output" | head -5)"
@@ -87,6 +99,7 @@ cleanup() {
     rm -f /tmp/mb_test_output_* 2>/dev/null || true
     rm -f /tmp/mb_test_ref_* 2>/dev/null || true
 }
+trap cleanup EXIT
 
 # Run all test groups
 echo "============================================"
@@ -121,7 +134,7 @@ echo "--- Test Group 1: CLI Basics ---"
 # Test 1: version command
 echo "[1.1] Version command"
 output=$("$BINARY" version 2>&1)
-assert_output_contains "version prints version string" "0\." "$output"
+assert_output_contains "version prints version string" "[0-9]+\.[0-9]+" "$output"
 
 # Test 2: help output
 echo "[1.2] Help output contains commands"
@@ -325,10 +338,10 @@ rm -f /tmp/mb_test_fa2bit 2>/dev/null || true
 
 # Test 33: genbwt (separate indexing routine)
 echo "[9.3] genbwt generates BWT from .l2b"
-# genbwt needs a .l2b file; use the existing test index
-"$BINARY" genbwt "$TEST_PREFIX.l2b" > /dev/null 2>&1
-# genbwt writes to .mbw; check it exists
-assert_file_exists "genbwt output" "$TEST_PREFIX.mbw"
+# genbwt needs both input (.l2b) and output (.mbw) paths
+"$BINARY" genbwt "$TEST_PREFIX.l2b" /tmp/mb_test_genbwt_out.mbw > /dev/null 2>&1
+assert_file_exists "genbwt output .mbw" "/tmp/mb_test_genbwt_out.mbw"
+rm -f /tmp/mb_test_genbwt_out.mbw 2>/dev/null || true
 
 echo ""
 echo "--- Test Group 10: BS-seq Mapping ---"

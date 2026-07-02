@@ -12,7 +12,7 @@ PASS=0
 FAIL=0
 
 pass() { PASS=$((PASS + 1)); echo -e "  \033[0;32mPASS\033[0m: $1"; }
-fail() { FAIL=$((FAIL + 1)); echo -e "  \033[0;31mFAIL\033[0m: $1"; }
+fail() { FAIL=$((FAIL + 1)); if [ -n "${2:-}" ]; then echo -e "  \033[0;31mFAIL\033[0m: $1 ($2)"; else echo -e "  \033[0;31mFAIL\033[0m: $1"; fi }
 skip() { echo -e "  \033[1;33mSKIP\033[0m: $1"; }
 
 echo "============================================"
@@ -53,7 +53,7 @@ fi
 
 # Test 3: genbwt with different thread counts
 echo "[IR 3] genbwt with multi-threading"
-"$BINARY" genbwt /tmp/mb_ir_fa2bit /tmp/mb_ir_fa2bit_t.mbw > /dev/null 2>&1
+"$BINARY" genbwt -t2 /tmp/mb_ir_fa2bit /tmp/mb_ir_fa2bit_t.mbw > /dev/null 2>&1
 if [ -f "/tmp/mb_ir_fa2bit_t.mbw" ]; then
     pass "genbwt multi-thread creates .mbw"
 else
@@ -62,45 +62,39 @@ fi
 
 # Test 4: genraw - generate BWT from pac with BWT-SW algorithm
 echo "[IR 4] genraw: generate BWT from .pac"
-# First create .pac file using fa2bit then genbwt (which creates .pac internally)
-# Actually, genraw takes a .pac file. Let's create one via the main index pipeline.
-"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_ir_genraw > /dev/null 2>&1
+# Create .pac file via fa2bit -p (which outputs BWA pac format)
+"$BINARY" fa2bit -p "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_ir_genraw.pac > /dev/null 2>&1
 if [ -f "/tmp/mb_ir_genraw.pac" ]; then
-    "$BINARY" genraw /tmp/mb_ir_genraw.pac /tmp/mb_ir_genraw_out > /dev/null 2>&1
-    if [ -f "/tmp/mb_ir_genraw_out.bwt" ] || [ -f "/tmp/mb_ir_genraw_out.occ" ]; then
-        pass "genraw produces BWT/occ files"
-    else
-        # genraw may produce different output names; check for any output
-        count=$(ls /tmp/mb_ir_genraw_out* 2>/dev/null | wc -l)
-        if [ "$count" -gt 0 ]; then
-            pass "genraw produces output files ($count files)"
+        "$BINARY" genraw /tmp/mb_ir_genraw.pac /tmp/mb_ir_genraw_out > /dev/null 2>&1
+        if [ -f "/tmp/mb_ir_genraw_out.bwt" ] || [ -f "/tmp/mb_ir_genraw_out.occ" ]; then
+            pass "genraw produces BWT/occ files"
         else
-            fail "genraw produced no output files"
+            # genraw may produce different output names; check for any output
+            count=$(ls /tmp/mb_ir_genraw_out* 2>/dev/null | wc -l) || count=0
+            if [ "$count" -gt 0 ]; then
+                pass "genraw produces output files ($count files)"
+            else
+                fail "genraw produced no output files"
+            fi
         fi
-    fi
 else
-    # .pac might not be created by default; check for .l2b instead
-    if [ -f "/tmp/mb_ir_genraw.l2b" ]; then
-        pass "genraw input .pac not created by index (expected), skipping"
-    else
-        fail "genraw: no .pac or .l2b found"
-    fi
+    fail "fa2bit -p did not produce .pac file"
 fi
 rm -f /tmp/mb_ir_genraw* 2>/dev/null || true
 
 # Test 5: raw2bwt - recode bwtgen raw BWT
 echo "[IR 5] raw2bwt: recode bwtgen raw BWT"
-# raw2bwt takes output from genraw and produces .mbz
-"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_ir_raw2bwt > /dev/null 2>&1
+# raw2bwt writes to the exact output path given on the command line (no extension added)
+"$BINARY" fa2bit -p "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_ir_raw2bwt.pac > /dev/null 2>&1
 if [ -f "/tmp/mb_ir_raw2bwt.pac" ]; then
     "$BINARY" genraw /tmp/mb_ir_raw2bwt.pac /tmp/mb_ir_raw2bwt_out > /dev/null 2>&1
-    # raw2bwt reads .bwt and .occ from genraw output
+    # raw2bwt reads .bwt and .occ from genraw output, writes to exact output path
     "$BINARY" raw2bwt /tmp/mb_ir_raw2bwt_out /tmp/mb_ir_raw2bwt_final > /dev/null 2>&1
-    if [ -f "/tmp/mb_ir_raw2bwt_final.mbz" ] || [ -f "/tmp/mb_ir_raw2bwt_final.mbw" ]; then
-        pass "raw2bwt produces output"
+    if [ -f "/tmp/mb_ir_raw2bwt_final" ]; then
+        pass "raw2bwt produces output at exact path"
     else
-        # Check for any output files
-        count=$(ls /tmp/mb_ir_raw2bwt_final* 2>/dev/null | wc -l)
+        # Check for any output files (raw2bwt may produce .mbz or other names)
+        count=$(ls /tmp/mb_ir_raw2bwt_final* 2>/dev/null | wc -l) || count=0
         if [ "$count" -gt 0 ]; then
             pass "raw2bwt produces output files ($count files)"
         else
@@ -108,7 +102,7 @@ if [ -f "/tmp/mb_ir_raw2bwt.pac" ]; then
         fi
     fi
 else
-    skip "raw2bwt: no .pac file available"
+    skip "raw2bwt: fa2bit -p did not produce .pac file"
 fi
 rm -f /tmp/mb_ir_raw2bwt* /tmp/mb_ir_raw2bwt_out* /tmp/mb_ir_raw2bwt_final* 2>/dev/null || true
 
