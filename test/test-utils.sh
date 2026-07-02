@@ -89,7 +89,7 @@ fi
 # Test 10: version via map subcommand
 echo "[UT 10] version flag in map subcommand"
 output=$("$BINARY" map --version 2>&1)
-if echo "$output" | grep -qE "0\."; then
+if echo "$output" | grep -qE "[0-9]+\.[0-9]+"; then
     pass "map --version shows version"
 else
     fail "map --version output unexpected"
