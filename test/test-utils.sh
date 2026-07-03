@@ -7,12 +7,16 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DATA_DIR="$SCRIPT_DIR/data"
+# Temporary directory for test output files.
+# Uses $TMPDIR if set, otherwise falls back to a local subdirectory.
+TMP_DIR="${TMPDIR:-.}/_minibwa_test_tmp"
+mkdir -p "$TMP_DIR"
 BINARY="${REPO_DIR}/minibwa"
 PASS=0
 FAIL=0
 
 cleanup() {
-    rm -f /tmp/mb_utils_test* /tmp/mb_bench_* /tmp/mb_fastmap.out 2>/dev/null || true
+    rm -f "$TMP_DIR"/mb_utils_test* "$TMP_DIR"/mb_bench_* "$TMP_DIR"/mb_fastmap.out 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -32,31 +36,56 @@ echo ""
 
 # Create test index
 echo "Setting up test index..."
-"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" /tmp/mb_utils_test > /dev/null 2>&1
-if [ ! -f "/tmp/mb_utils_test.mbw" ]; then
+"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" $TMP_DIR/mb_utils_test > /dev/null 2>&1
+if [ ! -f "$TMP_DIR/mb_utils_test.mbw" ]; then
     echo "ERROR: Failed to create test index"
     exit 1
 fi
 
 # Test 1: bench command (2a - rank2a benchmark)
-echo "[UT 1] bench -b 2a (rank2a benchmark) - skipped (known segfault)"
-skip "bench 2a causes segfault (known bug)"
+echo "[UT 1] bench -b 2a (rank2a benchmark)"
+output=$("$BINARY" bench -b 2a $TMP_DIR/mb_utils_test.mbw 2>&1)
+if echo "$output" | grep -q "checksum"; then
+    pass "bench 2a runs without error"
+else
+    fail "bench 2a failed"
+fi
 
 # Test 2: bench command (sa benchmark)
-echo "[UT 2] bench -b sa (SA query benchmark) - skipped (known segfault)"
-skip "bench sa causes segfault (known bug)"
+echo "[UT 2] bench -b sa (SA query benchmark)"
+output=$("$BINARY" bench -b sa $TMP_DIR/mb_utils_test.mbw 2>&1)
+if echo "$output" | grep -q "checksum"; then
+    pass "bench sa runs without error"
+else
+    fail "bench sa failed"
+fi
 
 # Test 3: bench command (msa benchmark)
-echo "[UT 3] bench -b msa (batched SA benchmark) - skipped (known segfault)"
-skip "bench msa causes segfault (known bug)"
+echo "[UT 3] bench -b msa (batched SA benchmark)"
+output=$("$BINARY" bench -b msa $TMP_DIR/mb_utils_test.mbw 2>&1)
+if echo "$output" | grep -q "checksum"; then
+    pass "bench msa runs without error"
+else
+    fail "bench msa failed"
+fi
 
 # Test 4: bench with different interval sizes
-echo "[UT 4] bench -b msa with different interval sizes - skipped (known segfault)"
-skip "bench msa causes segfault (known bug)"
+echo "[UT 4] bench -b msa with different interval sizes (-v 50)"
+output=$("$BINARY" bench -b msa -v 50 $TMP_DIR/mb_utils_test.mbw 2>&1)
+if echo "$output" | grep -q "checksum"; then
+    pass "bench msa -v 50 runs without error"
+else
+    fail "bench msa -v 50 failed"
+fi
 
 # Test 5: bench with single SA mode
-echo "[UT 5] bench -b msa -1 (single SA mode) - skipped (known segfault)"
-skip "bench msa -1 causes segfault (known bug)"
+echo "[UT 5] bench -b msa -1 (single SA mode)"
+output=$("$BINARY" bench -b msa -1 $TMP_DIR/mb_utils_test.mbw 2>&1)
+if echo "$output" | grep -q "checksum"; then
+    pass "bench msa -1 runs without error"
+else
+    fail "bench msa -1 failed"
+fi
 
 # Test 6: bench help
 echo "[UT 6] bench --help"
@@ -69,11 +98,11 @@ fi
 
 # Test 7: fastmap command
 echo "[UT 7] fastmap - test seeding strategies"
-"$BINARY" fastmap /tmp/mb_utils_test "$DATA_DIR/chrM-read_1.fa.gz" > /tmp/mb_fastmap.out 2>/dev/null
-if [ -f "/tmp/mb_fastmap.out" ]; then
+"$BINARY" fastmap $TMP_DIR/mb_utils_test "$DATA_DIR/chrM-read_1.fa.gz" > $TMP_DIR/mb_fastmap.out 2>/dev/null
+if [ -f "$TMP_DIR/mb_fastmap.out" ]; then
     pass "fastmap runs without error"
     # fastmap should produce some output about seeding
-    lines=$(wc -l < /tmp/mb_fastmap.out)
+    lines=$(wc -l < $TMP_DIR/mb_fastmap.out)
     if [ "$lines" -gt 0 ]; then
         pass "fastmap produces output ($lines lines)"
     else
@@ -83,9 +112,14 @@ else
     fail "fastmap produced no output"
 fi
 
-# Test 8: fastmap with different options (skipped - segfault with -k option)
-echo "[UT 8] fastmap with various options - skipped (segfault with -k)"
-skip "fastmap -k causes segfault (known bug)"
+# Test 8: fastmap with different options
+echo "[UT 8] fastmap with -n (no base alignment)"
+output=$("$BINARY" fastmap -n $TMP_DIR/mb_utils_test "$DATA_DIR/chrM-read_1.fa.gz" 2>&1)
+if echo "$output" | grep -qE "(seed|anchor|map)"; then
+    pass "fastmap -n produces output"
+else
+    fail "fastmap -n failed"
+fi
 
 # Test 9: version output format
 echo "[UT 9] version output format"
@@ -105,18 +139,30 @@ else
     fail "map --version output unexpected"
 fi
 
-# Test 11: bench with verbose output (skipped - segfault)
-echo "[UT 11] bench with -p (print per-data-point results) - skipped (segfault)"
-skip "bench -p causes segfault (known bug)"
+# Test 11: bench with verbose output (-p)
+echo "[UT 11] bench with -p (print per-data-point results)"
+"$BINARY" bench -b 2a -p $TMP_DIR/mb_utils_test.mbw > $TMP_DIR/mb_bench_p.out 2>&1
+if [ -s "$TMP_DIR/mb_bench_p.out" ] && grep -qE "^[0-9]+$" "$TMP_DIR/mb_bench_p.out"; then
+    pass "bench -p prints per-data-point results"
+else
+    fail "bench -p did not print results"
+fi
+rm -f "$TMP_DIR"/mb_bench_p.out
 
-# Test 12: bench with checksum verification (skipped - segfault)
-echo "[UT 12] bench checksum consistency - skipped (segfault)"
-skip "bench checksum test causes segfault (known bug)"
+# Test 12: bench with checksum verification
+echo "[UT 12] bench checksum consistency"
+c1=$("$BINARY" bench -b 2a $TMP_DIR/mb_utils_test.mbw 2>&1 | grep -oE "checksum = [0-9a-f]+" | head -1)
+c2=$("$BINARY" bench -b 2a $TMP_DIR/mb_utils_test.mbw 2>&1 | grep -oE "checksum = [0-9a-f]+" | head -1)
+if [ "$c1" = "$c2" ] && [ -n "$c1" ]; then
+    pass "bench checksum is consistent across runs"
+else
+    fail "bench checksum differs across runs"
+fi
 
 # Cleanup
 echo ""
 echo "Cleaning up..."
-rm -f /tmp/mb_utils_test* /tmp/mb_bench_* /tmp/mb_fastmap.out 2>/dev/null || true
+rm -f $TMP_DIR/mb_utils_test* $TMP_DIR/mb_bench_* $TMP_DIR/mb_fastmap.out 2>/dev/null || true
 
 echo ""
 echo "============================================"
