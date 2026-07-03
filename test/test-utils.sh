@@ -54,11 +54,12 @@ fi
 
 # Test 2: bench command (sa benchmark)
 echo "[UT 2] bench -b sa (SA query benchmark)"
-output=$("$BINARY" bench -b sa $TMP_DIR/mb_utils_test.mbw 2>&1)
-if echo "$output" | grep -q "checksum"; then
+output=$("$BINARY" bench -b sa "$TMP_DIR/mb_utils_test.mbw" 2>&1)
+rc=$?
+if [ "$rc" -eq 0 ] && echo "$output" | grep -q "checksum"; then
     pass "bench sa runs without error"
 else
-    fail "bench sa failed"
+    fail "bench sa failed (exit code $rc)"
 fi
 
 # Test 3: bench command (msa benchmark)
