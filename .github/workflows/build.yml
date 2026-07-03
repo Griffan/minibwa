@@ -23,59 +23,62 @@ jobs:
       - run: make -j$(nproc || sysctl -n hw.ncpu)
       - run: make -j$(nproc || sysctl -n hw.ncpu) -C api-test
 
-test:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v7
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
 
-    # 1. Install coverage tools
-    - name: Install lcov
-      run: sudo apt-get update && sudo apt-get install -y lcov
+      # 1. Install coverage tools
+      - name: Install lcov
+        run: sudo apt-get update && sudo apt-get install -y lcov
 
-    # 2. Build with coverage instrumentation
-    - name: Build with coverage flags
-      run: |
-        make clean || true
-        make CFLAGS="-fprofile-arcs -ftest-coverage -O0" \
-             LDFLAGS="-fprofile-arcs"
+      # 2. Build with coverage instrumentation
+      - name: Build with coverage flags
+        run: |
+          make clean || true
+          make CFLAGS="-fprofile-arcs -ftest-coverage -O0" \
+              LDFLAGS="-fprofile-arcs"
 
-    # 3. Clear old coverage data and run all tests
-    - name: Run all tests
-      run: |
-        lcov --zerocounters --directory .
-        lcov --capture --directory . --initial --output-file coverage.base
-        bash test/run-tests.sh && \
-        bash test/test-api.sh && \
-        bash test/test-bisulfite.sh && \
-        bash test/test-index-routines.sh && \
-        bash test/test-utils.sh
-        lcov --capture --directory . --output-file coverage.full
-        lcov -a coverage.base -a coverage.full -o coverage.info
+      # 3. Clear old coverage data and run all tests
+      - name: Run all tests
+        run: |
+          lcov --zerocounters --directory .
+          lcov --capture --directory . --initial --output-file coverage.base
+          bash test/run-tests.sh && \
+          bash test/test-api.sh && \
+          bash test/test-bisulfite.sh && \
+          bash test/test-index-routines.sh && \
+          bash test/test-utils.sh
+          lcov --capture --directory . --output-file coverage.full
+          lcov -a coverage.base -a coverage.full -o coverage.info
 
-    # 4. Filter coverage to only include minibwa source files
-    - name: Filter coverage
-      run: |
-        lcov --remove coverage.info \
-          '/usr/*' '*libsais*' '*ksw2*' '*mimalloc*' '*test/*' \
-          --output-file coverage.filtered
+      # 4. Filter coverage to only include minibwa source files
+      - name: Filter coverage
+        run: |
+          lcov --remove coverage.info \
+            '/usr/*' '*libsais*' '*ksw2*' '*mimalloc*' '*test/*' \
+            --output-file coverage.filtered
 
-    # 5. Generate HTML report and coverage.json for badge
-    - name: Generate coverage report
-      id: coverage
-      run: |
-        genhtml coverage.filtered --output-directory coverage \
-          --title "Minibwa Coverage" \
-          --legend
+      # 5. Generate HTML report and coverage badge data
+      - name: Generate coverage report
+        id: coverage
+        run: |
+          genhtml coverage.filtered --output-directory coverage \
+            --title "Minibwa Coverage" \
+            --legend
 
-        # Extract coverage percentage
-        TOTAL=$(lcov --summary coverage.filtered | sed -n 's/^  lines.*: *\([0-9.]*\)%.*/\1/p' | head -n1)
-        echo "coverage=$TOTAL" >> "$GITHUB_OUTPUT"
-        echo "Coverage: $TOTAL%"
+          # Extract coverage percentage
+          TOTAL=$(lcov --summary coverage.filtered | sed -n 's/^  lines.*: *\([0-9.]*\)%.*/\1/p' | head -n1)
+          echo "coverage=$TOTAL" >> "$GITHUB_OUTPUT"
+          echo "Coverage: $TOTAL%"
 
-    # 6. Upload coverage artifact
-    - name: Upload coverage HTML
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-report
-        path: coverage
+          # Save coverage percentage as a plain text file for the README badge
+          echo "$TOTAL" > coverage/coverage.txt
+
+      # 6. Upload coverage artifact
+      - name: Upload coverage HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
 
