@@ -42,7 +42,7 @@ jobs:
       # 3. Clear old coverage data and run all tests
       - name: Run all tests
         run: |
-          lcov --zerocounters --directory .
+          lcov --zerocounters --directory . 
           lcov --capture --directory . --initial --output-file coverage.base
           bash test/run-tests.sh && \
           bash test/test-api.sh && \
@@ -57,7 +57,8 @@ jobs:
         run: |
           lcov --remove coverage.info \
             '/usr/*' '*libsais*' '*ksw2*' '*mimalloc*' '*test/*' \
-            --output-file coverage.filtered
+            --output-file coverage.filtered \
+            --ignore-errors unused
 
       # 5. Generate HTML report and coverage badge data
       - name: Generate coverage report
