@@ -50,6 +50,10 @@ assert_contains() {
 
 assert_not_contains() {
     local desc="$1" pattern="$2" file="$3"
+    if [ ! -f "$file" ]; then
+        fail "$desc" "File does not exist: $file"
+        return
+    fi
     if ! grep -q "$pattern" "$file"; then
         pass "$desc"
     else
@@ -200,7 +204,7 @@ cleanup() {
     rm -f /tmp/bs_sim_ref_* 2>/dev/null || true
     rm -f /tmp/bs_test_*.fa /tmp/bs_test_*.fa.gz 2>/dev/null || true
 }
-
+trap cleanup EXIT
 # Run all test groups
 echo "============================================"
 echo " Minibwa Bisulfite (BS-seq) Simulation Tests"
@@ -276,7 +280,7 @@ assert_contains "BS-seq output has @PG header" "^@PG" "/tmp/bs_sim_output_f.sam"
 echo "[2.4] Verify BS-seq mapped reads have alignment flags"
 # Check that mapped reads have flags other than 4 (unmapped)
 # Use a single grep with alternation for all expected mapped flags
-if grep -qP "\t(0|3|11|19|27|35|43|51|59|67|75|83|91|99|107|115|123|127|135|143|147|151|155|163|171|179|183|187|191|195|203|211|219|223|231|239|247|255)\t" "/tmp/bs_sim_output_f.sam" 2>/dev/null; then
+if grep -qE $'\t(0|3|11|19|27|35|43|51|59|67|75|83|91|99|107|115|123|127|135|143|147|151|155|163|171|179|183|187|191|195|203|211|219|223|231|239|247|255)\t' "/tmp/bs_sim_output_f.sam" 2>/dev/null; then
     pass "BS-seq output has mapped reads with various flags"
 else
     fail "BS-seq output missing mapped reads" "No mapped flags found in SAM"
@@ -317,7 +321,7 @@ assert_line_count "BS-seq PE output has reads" 50 "/tmp/bs_sim_output_pe.sam"
 # Note: Simulated PE reads may not have proper pair geometry, so we just check for PE flags
 echo "[3.3] Verify BS-seq PE output has PE alignment flags"
 # Check for any PE-related flags (1, 2, 8, 16, 128, 144, 147, 163, 179, 187, 203, 219, 227, 243, 255)
-if grep -qP "\t(1|2|8|16|128|144|147|163|179|187|203|219|227|243|255)\t" /tmp/bs_sim_output_pe.sam 2>/dev/null; then
+if grep -qE $'\t(1|2|8|16|128|144|147|163|179|187|203|219|227|243|255)\t' /tmp/bs_sim_output_pe.sam 2>/dev/null; then
     pass "BS-seq PE output has PE alignment flags"
 else
     # Fallback: just check that the output has reads with flags

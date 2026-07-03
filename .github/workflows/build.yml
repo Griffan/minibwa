@@ -27,5 +27,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - run: make -j$(nproc)
+      - run: make -j$(nproc || sysctl -n hw.ncpu)
       - run: bash test/run-tests.sh

@@ -12,6 +12,18 @@ API_DIR="$REPO_DIR/api-test"
 PASS=0
 FAIL=0
 
+cleanup() {
+    rm -f /tmp/mb_api_test.l2b /tmp/mb_api_test.mbw /tmp/mb_api_one_out.txt /tmp/mb_api_batch_out.txt 2>/dev/null || true
+    rm -f "$API_DIR/mbmap-one" "$API_DIR/mbmap-batch" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+if [ ! -x "$BINARY" ]; then
+    echo "ERROR: Binary not found or not executable: $BINARY"
+    echo "Build it first with: cd $REPO_DIR && make"
+    exit 1
+fi
+
 pass() { PASS=$((PASS + 1)); echo -e "  \033[0;32mPASS\033[0m: $1"; }
 fail() { FAIL=$((FAIL + 1)); echo -e "  \033[0;31mFAIL\033[0m: $1"; }
 

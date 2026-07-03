@@ -11,6 +11,16 @@ BINARY="${REPO_DIR}/minibwa"
 PASS=0
 FAIL=0
 
+cleanup() {
+    rm -f /tmp/mb_utils_test* /tmp/mb_bench_* /tmp/mb_fastmap.out 2>/dev/null || true
+}
+trap cleanup EXIT
+
+if [ ! -x "$BINARY" ]; then
+    echo "ERROR: Binary not found or not executable: $BINARY"
+    echo "Build it first with: cd $REPO_DIR && make"
+    exit 1
+fi
 pass() { PASS=$((PASS + 1)); echo -e "  \033[0;32mPASS\033[0m: $1"; }
 fail() { FAIL=$((FAIL + 1)); echo -e "  \033[0;31mFAIL\033[0m: $1"; }
 skip() { echo -e "  \033[1;33mSKIP\033[0m: $1"; }
