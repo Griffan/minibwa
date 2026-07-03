@@ -36,17 +36,12 @@ echo " Minibwa API Example Tests"
 echo "============================================"
 echo ""
 
-# Build API examples
-echo "[API 1] Building API examples"
-if [ ! -f "$API_DIR/mbmap-one" ] || [ ! -f "$API_DIR/mbmap-batch" ]; then
-    make -C "$API_DIR" > /dev/null 2>&1
-fi
-
+# Verify API examples are built (should be built by CI before tests)
+echo "[API 1] Verifying API examples"
 if [ -f "$API_DIR/mbmap-one" ] && [ -f "$API_DIR/mbmap-batch" ]; then
-    pass "API examples built successfully"
+    pass "API examples found"
 else
-    fail "Failed to build API examples"
-    echo "  Run: make -C $API_DIR"
+    fail "API examples not found (build with: make -C api-test)"
     exit 1
 fi
 

@@ -39,6 +39,9 @@ jobs:
           make clean || true
           make CFLAGS="-fprofile-arcs -ftest-coverage -fprofile-update=atomic -O0" \
               LDFLAGS="-fprofile-arcs -fprofile-update=atomic "
+          make -C api-test \
+              CFLAGS="-fprofile-arcs -ftest-coverage -fprofile-update=atomic -O0" \
+              LDFLAGS="-fprofile-arcs -fprofile-update=atomic "
 
       # 3. Clear old coverage data and run all tests
       - name: Run all tests
