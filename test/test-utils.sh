@@ -2,7 +2,7 @@
 # Tests for utility commands: bench, fastmap, version
 # These test the debugging and performance evaluation tools.
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"

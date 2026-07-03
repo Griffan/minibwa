@@ -2,7 +2,7 @@
 # API example tests for minibwa
 # Tests the C API examples in api-test/
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"

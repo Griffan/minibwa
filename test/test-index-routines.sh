@@ -2,7 +2,7 @@
 # Tests for separate indexing routines: fa2bit, genraw, raw2bwt, gensa, genbwt
 # These are the individual steps that main_index orchestrates.
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"

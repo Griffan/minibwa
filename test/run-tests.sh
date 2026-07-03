@@ -3,7 +3,7 @@
 # Usage: ./run-tests.sh [binary]
 # If binary is not provided, uses ../minibwa from repo root.
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"

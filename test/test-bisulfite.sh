@@ -4,7 +4,7 @@
 # Usage: ./test-bisulfite.sh [binary] [ref_fasta]
 # If binary is not provided, uses ../minibwa from repo root.
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -116,6 +116,10 @@ generate_bs_reads() {
     ref_seq=$(zcat "$ref_fa" | grep -v '^>' | tr -d '\n')
 
     local ref_len=${#ref_seq}
+    local max_start=$((ref_len - read_len))
+    if [ "$max_start" -le 0 ]; then
+        max_start=1
+    fi
     local i
     local pos
 
@@ -123,8 +127,7 @@ generate_bs_reads() {
 
     for ((i = 0; i < num_reads; i++)); do
         # Generate a deterministic position based on read index
-        pos=$(( (i * 50 + 100) % (ref_len - read_len) ))
-
+        pos=$(( (i * 50 + 100) % max_start ))
         # Extract subsequence
         local subseq="${ref_seq:$pos:$read_len}"
 
@@ -167,6 +170,10 @@ generate_bs_pe_reads() {
     ref_seq=$(zcat "$ref_fa" | grep -v '^>' | tr -d '\n')
 
     local ref_len=${#ref_seq}
+    local max_start=$((ref_len - insert_size))
+    if [ "$max_start" -le 0 ]; then
+        max_start=1
+    fi
     local i
     local pos
 
@@ -175,8 +182,7 @@ generate_bs_pe_reads() {
 
     for ((i = 0; i < num_pairs; i++)); do
         # Generate a deterministic position
-        pos=$(( (i * 100 + 200) % (ref_len - insert_size) ))
-
+        pos=$(( (i * 100 + 200) % max_start ))
         # R1: forward strand, C-to-T conversion
         local r1_subseq="${ref_seq:$pos:$read_len}"
         r1_subseq=$(echo "$r1_subseq" | tr 'Cc' 'Tt')

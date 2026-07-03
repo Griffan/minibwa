@@ -57,7 +57,7 @@ jobs:
       - name: Filter coverage
         run: |
           lcov --remove coverage.info \
-            '/usr/*' '*libsais*' '*ksw2*' '*mimalloc*' '*test/*' \
+            '/usr/*' '*libsais*' '*ksw2*' '*mimalloc*' '*api-test*' '*test/*' \
             --output-file coverage.filtered \
             --ignore-errors unused
 
