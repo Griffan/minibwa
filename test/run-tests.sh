@@ -99,9 +99,9 @@ assert_output_contains() {
 # Cleanup function
 cleanup() {
     rm -f "$TEST_PREFIX".l2b "$TEST_PREFIX".mbw "$TEST_PREFIX".mbz 2>/dev/null || true
-    rm -f $TMP_DIR/mb_test_*.fa $TMP_DIR/mb_test_*.fa.gz $TMP_DIR/mb_test_*.fq $TMP_DIR/mb_test_*.fq.gz 2>/dev/null || true
-    rm -f $TMP_DIR/mb_test_output_* 2>/dev/null || true
-    rm -f $TMP_DIR/mb_test_ref_* 2>/dev/null || true
+    rm -f "$TMP_DIR"/mb_test_*.fa "$TMP_DIR"/mb_test_*.fa.gz "$TMP_DIR"/mb_test_*.fq "$TMP_DIR"/mb_test_*.fq.gz 2>/dev/null || true
+    rm -f "$TMP_DIR"/mb_test_output_* 2>/dev/null || true
+    rm -f "$TMP_DIR"/mb_test_ref_* 2>/dev/null || true
 }
 trap cleanup EXIT
 

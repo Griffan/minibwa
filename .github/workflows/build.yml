@@ -50,7 +50,7 @@ test:
         bash test/test-index-routines.sh && \
         bash test/test-utils.sh
         lcov --capture --directory . --output-file coverage.full
-        lcov --addtrace coverage.base coverage.full --output-file coverage.info
+        lcov -a coverage.base -a coverage.full -o coverage.info
 
     # 4. Filter coverage to only include minibwa source files
     - name: Filter coverage
@@ -68,7 +68,7 @@ test:
           --legend
 
         # Extract coverage percentage
-        TOTAL=$(lcov --summary coverage.filtered | grep 'lines\.covered' | awk '{print $4}' | tr -d '%')
+        TOTAL=$(lcov --summary coverage.filtered | sed -n 's/^  lines.*: *\([0-9.]*\)%.*/\1/p' | head -n1)
         echo "coverage=$TOTAL" >> "$GITHUB_OUTPUT"
         echo "Coverage: $TOTAL%"
 

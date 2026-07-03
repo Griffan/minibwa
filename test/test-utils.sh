@@ -102,7 +102,7 @@ echo "[UT 7] fastmap - test seeding strategies"
 if [ -f "$TMP_DIR/mb_fastmap.out" ]; then
     pass "fastmap runs without error"
     # fastmap should produce some output about seeding
-    lines=$(wc -l < $TMP_DIR/mb_fastmap.out)
+    lines=$(wc -l < "$TMP_DIR/mb_fastmap.out")
     if [ "$lines" -gt 0 ]; then
         pass "fastmap produces output ($lines lines)"
     else
@@ -160,9 +160,8 @@ else
 fi
 
 # Cleanup
-echo ""
 echo "Cleaning up..."
-rm -f $TMP_DIR/mb_utils_test* $TMP_DIR/mb_bench_* $TMP_DIR/mb_fastmap.out 2>/dev/null || true
+rm -f "$TMP_DIR"/mb_utils_test* "$TMP_DIR"/mb_bench_* "$TMP_DIR"/mb_fastmap.out 2>/dev/null || true
 
 echo ""
 echo "============================================"
