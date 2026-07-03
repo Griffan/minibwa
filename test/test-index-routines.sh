@@ -9,7 +9,7 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DATA_DIR="$SCRIPT_DIR/data"
 # Temporary directory for test output files.
 # Uses $TMPDIR if set, otherwise falls back to a local subdirectory.
-TMP_DIR="${TMPDIR:-.}/_minibwa_test_tmp"
+TMP_DIR="${TMPDIR:-$SCRIPT_DIR}/_minibwa_test_tmp.$$"
 mkdir -p "$TMP_DIR"
 BINARY="${REPO_DIR}/minibwa"
 PASS=0
@@ -36,7 +36,7 @@ echo ""
 
 # Test 1: fa2bit - convert FASTA to 2-bit
 echo "[IR 1] fa2bit: convert FASTA to long-2bit format"
-"$BINARY" fa2bit "$DATA_DIR/chrM-human.fa.gz" $TMP_DIR/mb_ir_fa2bit > /dev/null 2>&1
+"$BINARY" fa2bit "$DATA_DIR/chrM-human.fa.gz" "$TMP_DIR/mb_ir_fa2bit" > /dev/null 2>&1
 if [ -f "$TMP_DIR/mb_ir_fa2bit" ]; then
     pass "fa2bit creates output file"
     # Check file has reasonable size (chrM is ~16.5kb, should be small)

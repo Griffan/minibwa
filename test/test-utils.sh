@@ -9,7 +9,7 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DATA_DIR="$SCRIPT_DIR/data"
 # Temporary directory for test output files.
 # Uses $TMPDIR if set, otherwise falls back to a local subdirectory.
-TMP_DIR="${TMPDIR:-.}/_minibwa_test_tmp"
+TMP_DIR="${TMPDIR:-$SCRIPT_DIR}/_minibwa_test_tmp"
 mkdir -p "$TMP_DIR"
 BINARY="${REPO_DIR}/minibwa"
 PASS=0
@@ -159,8 +159,8 @@ rm -f "$TMP_DIR"/mb_bench_p.out
 
 # Test 12: bench with checksum verification
 echo "[UT 12] bench checksum consistency"
-c1=$("$BINARY" bench -b 2a $TMP_DIR/mb_utils_test.mbw 2>&1 | grep -oE "checksum = [0-9a-f]+" | head -1)
-c2=$("$BINARY" bench -b 2a $TMP_DIR/mb_utils_test.mbw 2>&1 | grep -oE "checksum = [0-9a-f]+" | head -1)
+c1=$("$BINARY" bench -b 2a "$TMP_DIR/mb_utils_test.mbw" 2>&1 | grep -oE "checksum = [0-9a-f]+" | head -1)
+c2=$("$BINARY" bench -b 2a "$TMP_DIR/mb_utils_test.mbw" 2>&1 | grep -oE "checksum = [0-9a-f]+" | head -1)
 if [ "$c1" = "$c2" ] && [ -n "$c1" ]; then
     pass "bench checksum is consistent across runs"
 else

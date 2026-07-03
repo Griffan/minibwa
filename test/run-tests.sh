@@ -167,10 +167,10 @@ assert_file_exists "index creates .mbw" "$TEST_PREFIX.mbw"
 
 # Test 6: index with custom prefix
 echo "[2.2] Index with custom prefix"
-"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" $TMP_DIR/mb_test_custom_prefix > /dev/null 2>&1
+"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" "$TMP_DIR/mb_test_custom_prefix" > /dev/null 2>&1
 assert_file_exists "custom prefix creates .l2b" "$TMP_DIR/mb_test_custom_prefix.l2b"
 assert_file_exists "custom prefix creates .mbw" "$TMP_DIR/mb_test_custom_prefix.mbw"
-rm -f $TMP_DIR/mb_test_custom_prefix.l2b $TMP_DIR/mb_test_custom_prefix.mbw 2>/dev/null || true
+rm -f "$TMP_DIR/mb_test_custom_prefix.l2b" "$TMP_DIR/mb_test_custom_prefix.mbw" 2>/dev/null || true
 
 # Test 7: index with multi-threading
 echo "[2.3] Index with threads"

@@ -11,7 +11,7 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DATA_DIR="$SCRIPT_DIR/data"
 # Temporary directory for test output files.
 # Uses $TMPDIR if set, otherwise falls back to a local subdirectory.
-TMP_DIR="${TMPDIR:-.}/_minibwa_test_tmp"
+TMP_DIR="${TMPDIR:-$SCRIPT_DIR}/_minibwa_test_tmp"
 mkdir -p "$TMP_DIR"
 BINARY="${1:-$REPO_DIR/minibwa}"
 REF_FA="${2:-$DATA_DIR/chrM-human.fa.gz}"
@@ -229,7 +229,12 @@ validate_bs_positions() {
     local suffix="${7:-:1}"
     local insert_size="${8:-0}"
 
-    local max_start=$((ref_len - read_len))
+    local max_start
+    if [ -n "$pe_prefix" ]; then
+        max_start=$((ref_len - insert_size))
+    else
+        max_start=$((ref_len - read_len))
+    fi
     if [ "$max_start" -le 0 ]; then
         max_start=1
     fi
