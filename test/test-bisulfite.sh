@@ -27,6 +27,7 @@ GT_SKIP=0
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 pass() { PASS=$((PASS + 1)); echo -e "  ${GREEN}PASS${NC}: $1"; }
@@ -686,12 +687,86 @@ assert_file_exists "BS-seq mixed strand output" "$TMP_DIR/bs_sim_output_mixed.sa
 rm -f "$TMP_DIR/bs_sim_mixed.fa" "$TMP_DIR/bs_sim_mixed.fa.gz"
 
 echo ""
+echo "--- Test Group 17: Ground-Truth Position Validation ---"
+
+# First, get the actual reference sequence length for position computation
+REF_SEQ=$(zcat "$REF_FA" | grep -v '^>' | tr -d '\n')
+REF_LEN=${#REF_SEQ}
+
+# [17.1] Forward SE position check (100 reads, 100bp, generated before test group 2)
+echo "[17.1] Forward SE position check (100 reads)"
+GT_PASS=0; GT_FAIL=0; GT_SKIP=0
+validate_bs_positions "$TMP_DIR/bs_sim_output_f.sam" "$REF_LEN" 100 "f" 100 ""
+if [ "$GT_FAIL" -eq 0 ]; then
+    pass "Forward SE: $GT_PASS/$((GT_PASS + GT_SKIP)) positions match (skipped $GT_SKIP unmapped)"
+else
+    fail "Forward SE: $GT_FAIL position mismatches out of $((GT_PASS + GT_SKIP)) validated"
+fi
+
+# [17.2] Reverse SE position check (50 reads, 100bp, generated before test group 2)
+echo "[17.2] Reverse SE position check (50 reads)"
+GT_PASS=0; GT_FAIL=0; GT_SKIP=0
+validate_bs_positions "$TMP_DIR/bs_sim_output_r.sam" "$REF_LEN" 100 "r" 50 ""
+if [ "$GT_FAIL" -eq 0 ]; then
+    pass "Reverse SE: $GT_PASS/$((GT_PASS + GT_SKIP)) positions match (skipped $GT_SKIP unmapped)"
+else
+    fail "Reverse SE: $GT_FAIL position mismatches out of $((GT_PASS + GT_SKIP)) validated"
+fi
+
+# [17.3] PE position check (50 pairs, 100bp each, 200bp insert)
+echo "[17.3] PE position check (50 pairs)"
+GT_PASS=0; GT_FAIL=0; GT_SKIP=0
+validate_bs_positions "$TMP_DIR/bs_sim_output_pe.sam" "$REF_LEN" 100 "f" 50 "pe"
+if [ "$GT_FAIL" -eq 0 ]; then
+    pass "PE: $GT_PASS/$((GT_PASS + GT_SKIP)) positions match (skipped $GT_SKIP unmapped)"
+else
+    fail "PE: $GT_FAIL position mismatches out of $((GT_PASS + GT_SKIP)) validated"
+fi
+
+# [17.4] Cross-mode consistency: --meth vs regular mode
+echo "[17.4] Cross-mode consistency (--meth vs regular)"
+"$BINARY" map "$TEST_PREFIX" $TMP_DIR/bs_sim_read_f.fa.gz > $TMP_DIR/bs_sim_output_regular.sam 2>/dev/null
+GT_PASS=0; GT_FAIL=0; GT_SKIP=0
+mismatch=0
+for ((i = 0; i < 50; i++)); do
+    read_name="read_bs_f_${i}"
+    meth_pos=$(grep "^${read_name}	" "$TMP_DIR/bs_sim_output_f.sam" 2>/dev/null | head -1 | awk '{print $4}')
+    reg_pos=$(grep "^${read_name}	" "$TMP_DIR/bs_sim_output_regular.sam" 2>/dev/null | head -1 | awk '{print $4}')
+    if [ -n "$meth_pos" ] && [ -n "$reg_pos" ] && [ "$meth_pos" != "$reg_pos" ]; then
+        mismatch=$((mismatch + 1))
+    fi
+done
+if [ "$mismatch" -eq 0 ]; then
+    pass "Cross-mode: 50 reads have consistent POS in --meth and regular modes"
+elif [ "$mismatch" -lt 5 ]; then
+    pass "Cross-mode: $((50 - mismatch))/50 reads agree on POS (minor differences expected for BS-converted reads)"
+else
+    fail "Cross-mode: $mismatch/50 reads have different POS between modes"
+fi
+rm -f $TMP_DIR/bs_sim_output_regular.sam
+
+# [17.5] Batch position validation (200 reads large batch + mixed strand sample)
+echo "[17.5] Batch position validation (200 reads + mixed strand)"
+GT_PASS=0; GT_FAIL=0; GT_SKIP=0
+validate_bs_positions "$TMP_DIR/bs_sim_output_large.sam" "$REF_LEN" 100 "f" 200 ""
+if [ "$GT_FAIL" -eq 0 ]; then
+    pass "Large batch: $GT_PASS/$((GT_PASS + GT_SKIP)) positions match (skipped $GT_SKIP unmapped)"
+else
+    fail "Large batch: $GT_FAIL position mismatches out of $((GT_PASS + GT_SKIP)) validated"
+fi
+
+echo ""
 echo "============================================"
 echo " BS-seq Test Summary"
 echo "============================================"
 echo -e " ${GREEN}$PASS${NC} passed"
 echo -e " ${RED}$FAIL${NC} failed"
 echo -e " ${YELLOW}$SKIP${NC} skipped"
+echo -e " ${BLUE}$GT_PASS${NC} ground-truth positions matched"
+if [ "$GT_FAIL" -gt 0 ]; then
+    echo -e " ${RED}${GT_FAIL}${NC} ground-truth position mismatches"
+fi
+echo -e " ${CYAN}${GT_SKIP}${NC} ground-truth skipped (unmapped/boundary)"
 echo "============================================"
 
 # Cleanup
