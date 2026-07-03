@@ -40,12 +40,12 @@ echo "[IR 1] fa2bit: convert FASTA to long-2bit format"
 if [ -f "$TMP_DIR/mb_ir_fa2bit" ]; then
     pass "fa2bit creates output file"
     # Check file has reasonable size (chrM is ~16.5kb, should be small)
-    size=$(stat -c%s "$TMP_DIR/mb_ir_fa2bit" 2>/dev/null || stat -f%z "$TMP_DIR/mb_ir_fa2bit" 2>/dev/null)
-    if [ "$size" -gt 0 ] && [ "$size" -lt 100000 ]; then
-        pass "fa2bit output size is reasonable ($size bytes)"
-    else
-        fail "fa2bit output size unexpected: $size bytes"
-    fi
+size=$(stat -c%s "$TMP_DIR/mb_ir_fa2bit" 2>/dev/null || stat -f%z "$TMP_DIR/mb_ir_fa2bit" 2>/dev/null || echo "")
+if [[ "$size" =~ ^[0-9]+$ ]] && [ "$size" -gt 0 ] && [ "$size" -lt 100000 ]; then
+    pass "fa2bit output size is reasonable ($size bytes)"
+else
+    fail "fa2bit output size unexpected: $size bytes"
+fi
 else
     fail "fa2bit did not create output file"
 fi
@@ -97,7 +97,7 @@ if [ -f "$TMP_DIR/mb_ir_genraw.pac" ]; then
 else
     fail "fa2bit -p did not produce .pac file"
 fi
-rm -f $TMP_DIR/mb_ir_genraw* 2>/dev/null || true
+rm -f "$TMP_DIR"/mb_ir_genraw* 2>/dev/null || true
 
 # Test 5: raw2bwt - recode bwtgen raw BWT
 echo "[IR 5] raw2bwt: recode bwtgen raw BWT"

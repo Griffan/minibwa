@@ -44,11 +44,12 @@ fi
 
 # Test 1: bench command (2a - rank2a benchmark)
 echo "[UT 1] bench -b 2a (rank2a benchmark)"
-output=$("$BINARY" bench -b 2a $TMP_DIR/mb_utils_test.mbw 2>&1)
-if echo "$output" | grep -q "checksum"; then
+output=$("$BINARY" bench -b 2a "$TMP_DIR/mb_utils_test.mbw" 2>&1)
+rc=$?
+if [ "$rc" -eq 0 ] && echo "$output" | grep -q "checksum"; then
     pass "bench 2a runs without error"
 else
-    fail "bench 2a failed"
+    fail "bench 2a failed (exit code $rc)"
 fi
 
 # Test 2: bench command (sa benchmark)

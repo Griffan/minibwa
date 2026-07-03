@@ -304,10 +304,10 @@ validate_bs_positions() {
 # Cleanup function
 cleanup() {
     rm -f "$TEST_PREFIX".l2b "$TEST_PREFIX".mbw "$TEST_PREFIX".meth.mbw 2>/dev/null || true
-    rm -f $TMP_DIR/bs_sim_read_*.fa $TMP_DIR/bs_sim_read_*.fa.gz 2>/dev/null || true
-    rm -f $TMP_DIR/bs_sim_output_* 2>/dev/null || true
-    rm -f $TMP_DIR/bs_sim_ref_* 2>/dev/null || true
-    rm -f $TMP_DIR/bs_test_*.fa $TMP_DIR/bs_test_*.fa.gz 2>/dev/null || true
+    rm -f "$TMP_DIR"/bs_sim_read_*.fa "$TMP_DIR"/bs_sim_read_*.fa.gz 2>/dev/null || true
+    rm -f "$TMP_DIR"/bs_sim_output_* 2>/dev/null || true
+    rm -f "$TMP_DIR"/bs_sim_ref_* 2>/dev/null || true
+    rm -f "$TMP_DIR"/bs_test_*.fa "$TMP_DIR"/bs_test_*.fa.gz 2>/dev/null || true
 }
 trap cleanup EXIT
 # Run all test groups
