@@ -229,7 +229,7 @@ validate_bs_positions() {
         max_start=1
     fi
 
-    local i expected_pos read_name expected_rname actual_rname actual_pos flag
+    local i expected_pos read_name expected_rname actual_rname actual_pos
     local sam_line
 
     for ((i = 0; i < num_reads; i++)); do
@@ -261,7 +261,6 @@ validate_bs_positions() {
         # Parse SAM fields: RNAME=$3, POS=$4, FLAG=$2
         actual_rname=$(echo "$sam_line" | awk '{print $3}')
         actual_pos=$(echo "$sam_line" | awk '{print $4}')
-        flag=$(echo "$sam_line" | awk '{print $2}')
 
         # Check unmapped
         if [ "$actual_rname" = "*" ]; then
