@@ -64,29 +64,32 @@ fi
 
 # Test 3: bench command (msa benchmark)
 echo "[UT 3] bench -b msa (batched SA benchmark)"
-output=$("$BINARY" bench -b msa $TMP_DIR/mb_utils_test.mbw 2>&1)
-if echo "$output" | grep -q "checksum"; then
+output=$("$BINARY" bench -b msa "$TMP_DIR/mb_utils_test.mbw" 2>&1)
+rc=$?
+if [ "$rc" -eq 0 ] && echo "$output" | grep -q "checksum"; then
     pass "bench msa runs without error"
 else
-    fail "bench msa failed"
+    fail "bench msa failed (exit code $rc)"
 fi
 
 # Test 4: bench with different interval sizes
 echo "[UT 4] bench -b msa with different interval sizes (-v 50)"
-output=$("$BINARY" bench -b msa -v 50 $TMP_DIR/mb_utils_test.mbw 2>&1)
-if echo "$output" | grep -q "checksum"; then
+output=$("$BINARY" bench -b msa -v 50 "$TMP_DIR/mb_utils_test.mbw" 2>&1)
+rc=$?
+if [ "$rc" -eq 0 ] && echo "$output" | grep -q "checksum"; then
     pass "bench msa -v 50 runs without error"
 else
-    fail "bench msa -v 50 failed"
+    fail "bench msa -v 50 failed (exit code $rc)"
 fi
 
 # Test 5: bench with single SA mode
 echo "[UT 5] bench -b msa -1 (single SA mode)"
-output=$("$BINARY" bench -b msa -1 $TMP_DIR/mb_utils_test.mbw 2>&1)
-if echo "$output" | grep -q "checksum"; then
+output=$("$BINARY" bench -b msa -1 "$TMP_DIR/mb_utils_test.mbw" 2>&1)
+rc=$?
+if [ "$rc" -eq 0 ] && echo "$output" | grep -q "checksum"; then
     pass "bench msa -1 runs without error"
 else
-    fail "bench msa -1 failed"
+    fail "bench msa -1 failed (exit code $rc)"
 fi
 
 # Test 6: bench help
@@ -100,27 +103,29 @@ fi
 
 # Test 7: fastmap command
 echo "[UT 7] fastmap - test seeding strategies"
-"$BINARY" fastmap $TMP_DIR/mb_utils_test "$DATA_DIR/chrM-read_1.fa.gz" > $TMP_DIR/mb_fastmap.out 2>/dev/null
-if [ -f "$TMP_DIR/mb_fastmap.out" ]; then
-    pass "fastmap runs without error"
-    # fastmap should produce some output about seeding
-    lines=$(wc -l < "$TMP_DIR/mb_fastmap.out")
-    if [ "$lines" -gt 0 ]; then
+fastmap_out="$TMP_DIR/mb_fastmap.out"
+"$BINARY" fastmap "$TMP_DIR/mb_utils_test" "$DATA_DIR/chrM-read_1.fa.gz" > "$fastmap_out" 2>/dev/null
+rc=$?
+if [ "$rc" -eq 0 ]; then
+    if [ -s "$fastmap_out" ]; then
+        pass "fastmap runs without error"
+        lines=$(wc -l < "$fastmap_out")
         pass "fastmap produces output ($lines lines)"
     else
         fail "fastmap produced empty output"
     fi
 else
-    fail "fastmap produced no output"
+    fail "fastmap failed (exit code $rc)"
 fi
 
 # Test 8: fastmap with different options
 echo "[UT 8] fastmap with -n (no base alignment)"
-output=$("$BINARY" fastmap -n $TMP_DIR/mb_utils_test "$DATA_DIR/chrM-read_1.fa.gz" 2>&1)
-if echo "$output" | grep -qE "(seed|anchor|map)"; then
+output=$("$BINARY" fastmap -n "$TMP_DIR/mb_utils_test" "$DATA_DIR/chrM-read_1.fa.gz" 2>&1)
+rc=$?
+if [ "$rc" -eq 0 ] && echo "$output" | grep -qE "(seed|anchor|map)"; then
     pass "fastmap -n produces output"
 else
-    fail "fastmap -n failed"
+    fail "fastmap -n failed (exit code $rc)"
 fi
 
 # Test 9: version output format
@@ -143,11 +148,12 @@ fi
 
 # Test 11: bench with verbose output (-p)
 echo "[UT 11] bench with -p (print per-data-point results)"
-"$BINARY" bench -b 2a -p $TMP_DIR/mb_utils_test.mbw > $TMP_DIR/mb_bench_p.out 2>&1
-if [ -s "$TMP_DIR/mb_bench_p.out" ] && grep -qE "^[0-9]+$" "$TMP_DIR/mb_bench_p.out"; then
+"$BINARY" bench -b 2a -p "$TMP_DIR/mb_utils_test.mbw" > "$TMP_DIR/mb_bench_p.out" 2>&1
+rc=$?
+if [ "$rc" -eq 0 ] && [ -s "$TMP_DIR/mb_bench_p.out" ] && grep -qE "^[0-9]+$" "$TMP_DIR/mb_bench_p.out"; then
     pass "bench -p prints per-data-point results"
 else
-    fail "bench -p did not print results"
+    fail "bench -p did not print results (exit code $rc)"
 fi
 rm -f "$TMP_DIR"/mb_bench_p.out
 
