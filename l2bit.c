@@ -390,14 +390,14 @@ int l2b_save_pac_meth(const char *fn, const l2b_t *l2b, int both_strand)
 		pac[x>>2] |= b << ((~x&3) * 2);
 	}
 	if (both_strand) {
-		// g2a reverse (g2a of reverse complement)
+		// g2a reverse (reverse complement of g2a converted sequence)
 		for (i = l2b->tot_len - 1; i >= 0; --i, ++x) {
-			b = l2b_g2a(3 - l2b_get0(l2b, i));
+			b = 3 - l2b_g2a(l2b_get0(l2b, i));
 			pac[x>>2] |= b << ((~x&3) * 2);
 		}
-		// c2t reverse (c2t of reverse complement)
+		// c2t reverse (reverse complement of c2t converted sequence)
 		for (i = l2b->tot_len - 1; i >= 0; --i, ++x) {
-			b = l2b_c2t(3 - l2b_get0(l2b, i));
+			b = 3 - l2b_c2t(l2b_get0(l2b, i));
 			pac[x>>2] |= b << ((~x&3) * 2);
 		}
 	}

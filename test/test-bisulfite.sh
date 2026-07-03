@@ -107,7 +107,7 @@ assert_output_contains() {
 # $2: output FASTA file
 # $3: number of reads to generate
 # $4: read length
-# $5: strand (f=forward/C-to-T, r=reverse/G-to-A)
+# $5: strand (f=forward/C-to-T, r=reverse/C-to-T)
 generate_bs_reads() {
     local ref_fa="$1"
     local out_fa="$2"
@@ -141,11 +141,11 @@ generate_bs_reads() {
             subseq=$(echo "$subseq" | tr 'Cc' 'Tt')
             echo -e ">read_bs_f_${i} length=${read_len}\n${subseq}" >> "$out_fa"
         elif [ "$strand" = "r" ]; then
-            # G-to-A conversion (reverse strand BS-seq)
-            # First reverse complement, then convert G-to-A
+            # C-to-T conversion on reverse strand BS-seq sequence
+            # First reverse complement, then convert C-to-T
             local rc
             rc=$(echo "$subseq" | rev | tr 'ACGT' 'TGCA')
-            rc=$(echo "$rc" | tr 'Gg' 'Aa')
+            rc=$(echo "$rc" | tr 'Cc' 'Tt')
             echo -e ">read_bs_r_${i} length=${read_len}\n${rc}" >> "$out_fa"
         fi
     done
@@ -192,7 +192,7 @@ generate_bs_pe_reads() {
         r1_subseq=$(echo "$r1_subseq" | tr 'Cc' 'Tt')
         echo -e ">read_pe_${i}:1 length=${read_len}\n${r1_subseq}" >> "$out_r1"
 
-        # R2: reverse strand (from end of insert), G-to-A conversion
+        # R2: reverse strand (from end of insert), C-to-T conversion
         local r2_pos=$((pos + insert_size - read_len))
         if [ "$r2_pos" -lt 0 ]; then
             r2_pos=0
@@ -201,7 +201,7 @@ generate_bs_pe_reads() {
         # Reverse complement for reverse strand
         local r2_rc
         r2_rc=$(echo "$r2_subseq" | rev | tr 'ACGT' 'TGCA')
-        r2_rc=$(echo "$r2_rc" | tr 'Gg' 'Aa')
+        r2_rc=$(echo "$r2_rc" | tr 'Cc' 'Tt')
         echo -e ">read_pe_${i}:2 length=${read_len}\n${r2_rc}" >> "$out_r2"
     done
 
@@ -214,9 +214,11 @@ generate_bs_pe_reads() {
 # $1: SAM output file
 # $2: Reference sequence length (numeric)
 # $3: Read length used during generation (numeric)
-# $4: Strand type — "f" for forward/C-to-T, "r" for reverse/G-to-A
+# $4: Strand type — "f" for forward/C-to-T, "r" for reverse/C-to-T
 # $5: Number of reads to validate (numeric)
 # $6: PE prefix — "pe" for paired-end, "" for single-end
+# $7: Read suffix for paired-end reads (":1" or ":2")
+# $8: Insert size for paired-end generation (required when $6 is "pe")
 validate_bs_positions() {
     local sam_file="$1"
     local ref_len="$2"
@@ -225,6 +227,7 @@ validate_bs_positions() {
     local num_reads="$5"
     local pe_prefix="$6"
     local suffix="${7:-:1}"
+    local insert_size="${8:-0}"
 
     local max_start=$((ref_len - read_len))
     if [ "$max_start" -le 0 ]; then
@@ -236,9 +239,13 @@ validate_bs_positions() {
 
     for ((i = 0; i < num_reads; i++)); do
         # Compute expected generation position (0-based)
-        # Use PE formula for paired-end reads, SE formula for single-end
+        # Use PE formula for paired-end reads, SE formula for single-end.
+        # For PE, R1 starts at pos; R2 starts at pos + insert_size - read_len.
         if [ -n "$pe_prefix" ]; then
             expected_pos=$(( (i * 100 + 200) % max_start ))
+            if [ "$suffix" = ":2" ]; then
+                expected_pos=$(( expected_pos + insert_size - read_len ))
+            fi
         else
             expected_pos=$(( (i * 50 + 100) % max_start ))
         fi
@@ -391,13 +398,13 @@ else
     fail "BS-seq output missing mapped reads" "No mapped flags found in SAM"
 fi
 
-# Test 8: Map simulated G-to-A converted reads (reverse strand)
-echo "[2.5] Generate and map simulated G-to-A reads (reverse strand)"
+# Test 8: Map simulated reverse-strand C-to-T converted reads
+echo "[2.5] Generate and map reverse-strand C-to-T reads"
 generate_bs_reads "$REF_FA" $TMP_DIR/bs_sim_read_r.fa 50 100 "r"
-assert_file_exists "Simulated G-to-A reads generated" "$TMP_DIR/bs_sim_read_r.fa.gz"
+assert_file_exists "Simulated reverse C-to-T reads generated" "$TMP_DIR/bs_sim_read_r.fa.gz"
 "$BINARY" map --meth "$TEST_PREFIX" $TMP_DIR/bs_sim_read_r.fa.gz > $TMP_DIR/bs_sim_output_r.sam 2>/dev/null
-assert_file_exists "BS-seq G-to-A mapping output" "$TMP_DIR/bs_sim_output_r.sam"
-assert_line_count "BS-seq G-to-A output has reads" 50 "$TMP_DIR/bs_sim_output_r.sam"
+assert_file_exists "BS-seq reverse C-to-T mapping output" "$TMP_DIR/bs_sim_output_r.sam"
+assert_line_count "BS-seq reverse C-to-T output has reads" 50 "$TMP_DIR/bs_sim_output_r.sam"
 
 # Test 9: Map simulated BS-seq reads with PAF output
 echo "[2.6] BS-seq mapping with PAF output (-f)"
@@ -733,8 +740,8 @@ fi
 # [17.3] PE position check (50 pairs, 100bp each, 200bp insert)
 echo "[17.3] PE position check (50 pairs, R1 + R2)"
 sub_before_pass=$GT_PASS; sub_before_fail=$GT_FAIL; sub_before_skip=$GT_SKIP
-validate_bs_positions "$TMP_DIR/bs_sim_output_pe.sam" "$REF_LEN" 100 "f" 50 "pe" ":1"
-validate_bs_positions "$TMP_DIR/bs_sim_output_pe.sam" "$REF_LEN" 100 "f" 50 "pe" ":2"
+validate_bs_positions "$TMP_DIR/bs_sim_output_pe.sam" "$REF_LEN" 100 "f" 50 "pe" ":1" 200
+validate_bs_positions "$TMP_DIR/bs_sim_output_pe.sam" "$REF_LEN" 100 "f" 50 "pe" ":2" 200
 sub_pass=$((GT_PASS - sub_before_pass))
 sub_fail=$((GT_FAIL - sub_before_fail))
 sub_skip=$((GT_SKIP - sub_before_skip))
