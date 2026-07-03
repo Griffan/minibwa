@@ -19,6 +19,9 @@ TEST_PREFIX="bs-test-$$"
 PASS=0
 FAIL=0
 SKIP=0
+GT_PASS=0
+GT_FAIL=0
+GT_SKIP=0
 
 # Colors for output
 RED='\033[0;31m'
@@ -204,6 +207,87 @@ generate_bs_pe_reads() {
     # Compress outputs
     gzip -f "$out_r1"
     gzip -f "$out_r2"
+}
+
+# Validate mapped read positions against known generation positions.
+# $1: SAM output file
+# $2: Reference sequence length (numeric)
+# $3: Read length used during generation (numeric)
+# $4: Strand type — "f" for forward/C-to-T, "r" for reverse/G-to-A
+# $5: Number of reads to validate (numeric)
+# $6: PE prefix — "pe" for paired-end, "" for single-end
+validate_bs_positions() {
+    local sam_file="$1"
+    local ref_len="$2"
+    local read_len="$3"
+    local strand="$4"
+    local num_reads="$5"
+    local pe_prefix="$6"
+
+    local max_start=$((ref_len - read_len))
+    if [ "$max_start" -le 0 ]; then
+        max_start=1
+    fi
+
+    local i expected_pos read_name expected_rname actual_rname actual_pos flag
+    local sam_line
+
+    for ((i = 0; i < num_reads; i++)); do
+        # Compute expected generation position (0-based)
+        expected_pos=$(( (i * 50 + 100) % max_start ))
+
+        # Skip boundary reads (would extend past reference end)
+        if [ $((expected_pos + read_len)) -gt "$ref_len" ]; then
+            GT_SKIP=$((GT_SKIP + 1))
+            continue
+        fi
+
+        # Build expected read name (strip " length=..." from FASTA header)
+        if [ -n "$pe_prefix" ]; then
+            read_name="read_pe_${i}:1"
+        else
+            read_name="read_bs_${strand}_${i}"
+        fi
+
+        # Find this read in SAM output
+        sam_line=$(grep "^${read_name}	" "$sam_file" 2>/dev/null | head -1)
+
+        if [ -z "$sam_line" ]; then
+            # Read not found in SAM (might be filtered or header-only)
+            GT_SKIP=$((GT_SKIP + 1))
+            continue
+        fi
+
+        # Parse SAM fields: RNAME=$3, POS=$4, FLAG=$2
+        actual_rname=$(echo "$sam_line" | awk '{print $3}')
+        actual_pos=$(echo "$sam_line" | awk '{print $4}')
+        flag=$(echo "$sam_line" | awk '{print $2}')
+
+        # Check unmapped
+        if [ "$actual_rname" = "*" ]; then
+            GT_SKIP=$((GT_SKIP + 1))
+            continue
+        fi
+
+        # Expected SAM POS is 1-based (bash is 0-based)
+        local expected_sam_pos=$((expected_pos + 1))
+
+        # Validate RNAME
+        expected_rname="chrM"
+        if [ "$actual_rname" != "$expected_rname" ]; then
+            GT_FAIL=$((GT_FAIL + 1))
+            fail "GT: $read_name RNAME=$actual_rname expected=$expected_rname"
+            continue
+        fi
+
+        # Validate POS (exact match)
+        if [ "$actual_pos" != "$expected_sam_pos" ]; then
+            GT_FAIL=$((GT_FAIL + 1))
+            fail "GT: $read_name POS=$actual_pos expected=$expected_sam_pos"
+        else
+            GT_PASS=$((GT_PASS + 1))
+        fi
+    done
 }
 
 # Cleanup function
