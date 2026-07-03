@@ -36,7 +36,7 @@ echo ""
 
 # Create test index
 echo "Setting up test index..."
-"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" $TMP_DIR/mb_utils_test > /dev/null 2>&1
+"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" "$TMP_DIR/mb_utils_test" > /dev/null 2>&1
 if [ ! -f "$TMP_DIR/mb_utils_test.mbw" ]; then
     echo "ERROR: Failed to create test index"
     exit 1

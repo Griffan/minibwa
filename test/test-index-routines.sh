@@ -84,7 +84,10 @@ if [ -f "$TMP_DIR/mb_ir_genraw.pac" ]; then
             pass "genraw produces BWT/occ files"
         else
             # genraw may produce different output names; check for any output
-            count=$(ls $TMP_DIR/mb_ir_genraw_out* 2>/dev/null | wc -l) || count=0
+            shopt -s nullglob
+            files=("$TMP_DIR"/mb_ir_genraw_out*)
+            shopt -u nullglob
+            count=${#files[@]}
             if [ "$count" -gt 0 ]; then
                 pass "genraw produces output files ($count files)"
             else
@@ -141,7 +144,7 @@ if [ -f "$TMP_DIR/mb_ir_roundtrip.l2b" ]; then
     if [ -f "$TMP_DIR/mb_ir_ref_extracted.fa" ]; then
         # Compare first line of FASTA header
         orig_header=$(zcat "$DATA_DIR/chrM-human.fa.gz" | head -1)
-        extract_header=$(head -1 $TMP_DIR/mb_ir_ref_extracted.fa)
+        extract_header=$(head -1 "$TMP_DIR/mb_ir_ref_extracted.fa")
         if [ "$orig_header" = "$extract_header" ]; then
             pass "getref extracts correct FASTA header"
         else

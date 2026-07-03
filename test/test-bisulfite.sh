@@ -595,12 +595,12 @@ assert_line_count "BS-seq large batch has reads" 200 "$TMP_DIR/bs_sim_output_lar
 # Test 43: BS-seq with both forward and reverse reads mixed
 echo "[16.3] BS-seq mapping with mixed strand reads"
 # Build mixed FASTA by concatenating decompressed forward + reverse reads, then re-gzip
-zcat $TMP_DIR/bs_sim_read_f.fa.gz > $TMP_DIR/bs_sim_mixed.fa 2>/dev/null && \
-zcat $TMP_DIR/bs_sim_read_r.fa.gz >> $TMP_DIR/bs_sim_mixed.fa 2>/dev/null && \
-gzip -f $TMP_DIR/bs_sim_mixed.fa
-"$BINARY" map --meth "$TEST_PREFIX" $TMP_DIR/bs_sim_mixed.fa.gz > $TMP_DIR/bs_sim_output_mixed.sam 2>/dev/null
+zcat "$TMP_DIR/bs_sim_read_f.fa.gz" > "$TMP_DIR/bs_sim_mixed.fa" 2>/dev/null && \
+zcat "$TMP_DIR/bs_sim_read_r.fa.gz" >> "$TMP_DIR/bs_sim_mixed.fa" 2>/dev/null && \
+gzip -f "$TMP_DIR/bs_sim_mixed.fa"
+"$BINARY" map --meth "$TEST_PREFIX" "$TMP_DIR/bs_sim_mixed.fa.gz" > "$TMP_DIR/bs_sim_output_mixed.sam" 2>/dev/null
 assert_file_exists "BS-seq mixed strand output" "$TMP_DIR/bs_sim_output_mixed.sam"
-rm -f $TMP_DIR/bs_sim_mixed.fa $TMP_DIR/bs_sim_mixed.fa.gz
+rm -f "$TMP_DIR/bs_sim_mixed.fa" "$TMP_DIR/bs_sim_mixed.fa.gz"
 
 echo ""
 echo "============================================"

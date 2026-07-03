@@ -383,8 +383,10 @@ echo "--- Test Group 12: Error Handling ---"
 # Test 36: missing index file (known segfault in current codebase)
 echo "[12.1] Missing index file"
 rc=0; "$BINARY" map nonexistent_index "$DATA_DIR/chrM-read_1.fa.gz" > /dev/null 2>&1 || rc=$?
-if [ "$rc" -ne 0 ]; then
-    pass "missing index exits non-zero (known segfault, exit code $rc)"
+if [ "$rc" -eq 139 ]; then
+    skip "missing index segfaults (exit code $rc)"
+elif [ "$rc" -ne 0 ]; then
+    pass "missing index exits non-zero (exit code $rc)"
 else
     fail "missing index exited 0 (unexpected)"
 fi
@@ -400,9 +402,11 @@ fi
 
 # Test 38: index missing file (known segfault in current codebase)
 echo "[12.3] Index missing FASTA"
-rc=0; "$BINARY" index nonexistent.fasta "$TMP_DIR"/mb_test_index_missing > /dev/null 2>&1 || rc=$?
-if [ "$rc" -ne 0 ]; then
-    pass "index missing FASTA exits non-zero (known segfault, exit code $rc)"
+rc=0; "$BINARY" index nonexistent.fasta "$TMP_DIR/mb_test_index_missing" > /dev/null 2>&1 || rc=$?
+if [ "$rc" -eq 139 ]; then
+    skip "index missing FASTA segfaults (exit code $rc)"
+elif [ "$rc" -ne 0 ]; then
+    pass "index missing FASTA exits non-zero (exit code $rc)"
 else
     fail "index missing FASTA exited 0 (unexpected)"
 fi
