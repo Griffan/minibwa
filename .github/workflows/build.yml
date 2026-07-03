@@ -43,13 +43,15 @@ jobs:
       # 3. Clear old coverage data and run all tests
       - name: Run all tests
         run: |
-          lcov --zerocounters --directory . 
+          lcov --zerocounters --directory .
           lcov --capture --directory . --initial --output-file coverage.base
-          bash test/run-tests.sh && \
-          bash test/test-api.sh && \
-          bash test/test-bisulfite.sh && \
-          bash test/test-index-routines.sh && \
+
+          bash test/run-tests.sh
+          bash test/test-api.sh
+          bash test/test-bisulfite.sh
+          bash test/test-index-routines.sh
           bash test/test-utils.sh
+
           lcov --capture --directory . --output-file coverage.full
           lcov -a coverage.base -a coverage.full -o coverage.info
 
