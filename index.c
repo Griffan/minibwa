@@ -61,12 +61,12 @@ static mb_bwt_t *mb_bwt_libsais(const l2b_t *l2b, int sa_bit, int both_strand, i
 		for (i = 0; i < l2b->tot_len; ++i, ++j)
 			seq[j] = l2b_g2a(l2b_get0(l2b, i));
 		if (both_strand) {
-			// g2a reverse (reverse complement of g2a converted)
+			// g2a reverse (g2a of reverse complement)
 			for (i = l2b->tot_len - 1; i >= 0; --i, ++j)
-				seq[j] = 3 - l2b_g2a(l2b_get0(l2b, i));
-			// c2t reverse (reverse complement of c2t converted)
+				seq[j] = l2b_g2a(3 - l2b_get0(l2b, i));
+			// c2t reverse (c2t of reverse complement)
 			for (i = l2b->tot_len - 1; i >= 0; --i, ++j)
-				seq[j] = 3 - l2b_c2t(l2b_get0(l2b, i));
+				seq[j] = l2b_c2t(3 - l2b_get0(l2b, i));
 		}
 	} else {
 		for (i = 0, j = 0; i < l2b->tot_len; ++i, ++j)
