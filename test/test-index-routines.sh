@@ -14,6 +14,7 @@ mkdir -p "$TMP_DIR"
 BINARY="${REPO_DIR}/minibwa"
 PASS=0
 FAIL=0
+SKIP=0
 
 cleanup() {
     rm -f "$TMP_DIR"/mb_ir_* 2>/dev/null || true
@@ -27,12 +28,22 @@ if [ ! -x "$BINARY" ]; then
 fi
 pass() { PASS=$((PASS + 1)); echo -e "  \033[0;32mPASS\033[0m: $1"; }
 fail() { FAIL=$((FAIL + 1)); if [ -n "${2:-}" ]; then echo -e "  \033[0;31mFAIL\033[0m: $1 ($2)"; else echo -e "  \033[0;31mFAIL\033[0m: $1"; fi }
-skip() { echo -e "  \033[1;33mSKIP\033[0m: $1"; }
+skip() { SKIP=$((SKIP + 1)); echo -e "  \033[1;33mSKIP\033[0m: $1"; }
 
 echo "============================================"
 echo " Minibwa Index Routine Tests"
 echo "============================================"
 echo ""
+
+# Detect whether the low-memory GPL BWT builder is compiled in.
+# genraw, raw2bwt and "index -l" all depend on GPL'd bwtgen code and are
+# skipped on builds made with `make gpl=0`.
+GPL_SUPPORT=0
+if "$BINARY" index -l "$DATA_DIR/chrM-human.fa.gz" "$TMP_DIR/mb_ir_gpltest" > /dev/null 2>&1 \
+        && [ -f "$TMP_DIR/mb_ir_gpltest.mbw" ]; then
+    GPL_SUPPORT=1
+fi
+rm -f "$TMP_DIR"/mb_ir_gpltest* 2>/dev/null || true
 
 # Test 1: fa2bit - convert FASTA to 2-bit
 echo "[IR 1] fa2bit: convert FASTA to long-2bit format"
@@ -74,12 +85,15 @@ else
     fail "genbwt multi-thread did not create .mbw"
 fi
 
-# Test 4: genraw - generate BWT from pac with BWT-SW algorithm
+# Test 4: genraw - generate BWT from pac with BWT-SW algorithm (GPL only)
 echo "[IR 4] genraw: generate BWT from .pac"
-# Create .pac file via fa2bit -p (which outputs BWA pac format)
-"$BINARY" fa2bit -p "$DATA_DIR/chrM-human.fa.gz" $TMP_DIR/mb_ir_genraw.pac > /dev/null 2>&1
-if [ -f "$TMP_DIR/mb_ir_genraw.pac" ]; then
-        "$BINARY" genraw $TMP_DIR/mb_ir_genraw.pac $TMP_DIR/mb_ir_genraw_out > /dev/null 2>&1
+if [ "$GPL_SUPPORT" -eq 0 ]; then
+    skip "genraw requires the GPL BWT builder (built with gpl=0)"
+else
+    # Create .pac file via fa2bit -p (which outputs BWA pac format)
+    "$BINARY" fa2bit -p "$DATA_DIR/chrM-human.fa.gz" "$TMP_DIR/mb_ir_genraw.pac" > /dev/null 2>&1
+    if [ -f "$TMP_DIR/mb_ir_genraw.pac" ]; then
+        "$BINARY" genraw "$TMP_DIR/mb_ir_genraw.pac" "$TMP_DIR/mb_ir_genraw_out" > /dev/null 2>&1
         if [ -f "$TMP_DIR/mb_ir_genraw_out.bwt" ] || [ -f "$TMP_DIR/mb_ir_genraw_out.occ" ]; then
             pass "genraw produces BWT/occ files"
         else
@@ -94,46 +108,58 @@ if [ -f "$TMP_DIR/mb_ir_genraw.pac" ]; then
                 fail "genraw produced no output files"
             fi
         fi
-else
-    fail "fa2bit -p did not produce .pac file"
+    else
+        fail "fa2bit -p did not produce .pac file"
+    fi
 fi
 rm -f "$TMP_DIR"/mb_ir_genraw* 2>/dev/null || true
 
-# Test 5: raw2bwt - recode bwtgen raw BWT
+# Test 5: raw2bwt - recode bwtgen raw BWT (depends on GPL genraw output)
 echo "[IR 5] raw2bwt: recode bwtgen raw BWT"
-# raw2bwt writes to the exact output path given on the command line (no extension added)
-"$BINARY" fa2bit -p "$DATA_DIR/chrM-human.fa.gz" $TMP_DIR/mb_ir_raw2bwt.pac > /dev/null 2>&1
-if [ -f "$TMP_DIR/mb_ir_raw2bwt.pac" ]; then
-    "$BINARY" genraw $TMP_DIR/mb_ir_raw2bwt.pac $TMP_DIR/mb_ir_raw2bwt_out > /dev/null 2>&1
-    # raw2bwt reads .bwt and .occ from genraw output, writes to exact output path
-    "$BINARY" raw2bwt $TMP_DIR/mb_ir_raw2bwt_out $TMP_DIR/mb_ir_raw2bwt_final > /dev/null 2>&1
-    if [ -f "$TMP_DIR/mb_ir_raw2bwt_final" ]; then
-        pass "raw2bwt produces output at exact path"
-    else
-        # Check for any output files (raw2bwt may produce .mbz or other names)
-        count=$(ls $TMP_DIR/mb_ir_raw2bwt_final* 2>/dev/null | wc -l) || count=0
-        if [ "$count" -gt 0 ]; then
-            pass "raw2bwt produces output files ($count files)"
-        else
-            fail "raw2bwt produced no output"
-        fi
-    fi
+if [ "$GPL_SUPPORT" -eq 0 ]; then
+    skip "raw2bwt input requires the GPL genraw builder (built with gpl=0)"
 else
-    skip "raw2bwt: fa2bit -p did not produce .pac file"
+    # raw2bwt writes to the exact output path given on the command line (no extension added)
+    "$BINARY" fa2bit -p "$DATA_DIR/chrM-human.fa.gz" "$TMP_DIR/mb_ir_raw2bwt.pac" > /dev/null 2>&1
+    if [ -f "$TMP_DIR/mb_ir_raw2bwt.pac" ]; then
+        "$BINARY" genraw "$TMP_DIR/mb_ir_raw2bwt.pac" "$TMP_DIR/mb_ir_raw2bwt_out" > /dev/null 2>&1
+        # raw2bwt reads .bwt and .occ from genraw output, writes to exact output path
+        "$BINARY" raw2bwt "$TMP_DIR/mb_ir_raw2bwt_out" "$TMP_DIR/mb_ir_raw2bwt_final" > /dev/null 2>&1
+        if [ -f "$TMP_DIR/mb_ir_raw2bwt_final" ]; then
+            pass "raw2bwt produces output at exact path"
+        else
+            # Check for any output files (raw2bwt may produce .mbz or other names)
+            shopt -s nullglob
+            files=("$TMP_DIR"/mb_ir_raw2bwt_final*)
+            shopt -u nullglob
+            if [ "${#files[@]}" -gt 0 ]; then
+                pass "raw2bwt produces output files (${#files[@]} files)"
+            else
+                fail "raw2bwt produced no output"
+            fi
+        fi
+    else
+        fail "raw2bwt: fa2bit -p did not produce .pac file"
+    fi
 fi
-rm -f $TMP_DIR/mb_ir_raw2bwt* $TMP_DIR/mb_ir_raw2bwt_out* $TMP_DIR/mb_ir_raw2bwt_final* 2>/dev/null || true
+rm -f "$TMP_DIR"/mb_ir_raw2bwt* "$TMP_DIR"/mb_ir_raw2bwt_out* "$TMP_DIR"/mb_ir_raw2bwt_final* 2>/dev/null || true
 
 # Test 6: gensa - generate sampled SA from BWT
 echo "[IR 6] gensa: generate sampled SA from BWT"
-"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" $TMP_DIR/mb_ir_gensa > /dev/null 2>&1
+"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" "$TMP_DIR/mb_ir_gensa" > /dev/null 2>&1
 if [ -f "$TMP_DIR/mb_ir_gensa.mbw" ]; then
-    "$BINARY" gensa $TMP_DIR/mb_ir_gensa.mbw > /dev/null 2>&1
-    # gensa may modify .mbw in place or create a new file
-    pass "gensa runs without error"
+    # gensa takes an input BWT and an explicit output path: <in.bwt> <out.bwt>
+    rc=0
+    "$BINARY" gensa "$TMP_DIR/mb_ir_gensa.mbw" "$TMP_DIR/mb_ir_gensa_out.mbw" > /dev/null 2>&1 || rc=$?
+    if [ "$rc" -eq 0 ] && [ -s "$TMP_DIR/mb_ir_gensa_out.mbw" ]; then
+        pass "gensa produces resampled BWT output"
+    else
+        fail "gensa did not produce output (exit code $rc)"
+    fi
 else
     fail "gensa: no .mbw input"
 fi
-rm -f $TMP_DIR/mb_ir_gensa* 2>/dev/null || true
+rm -f "$TMP_DIR"/mb_ir_gensa* 2>/dev/null || true
 
 # Test 7: Verify index round-trip (index -> map -> getref -> compare)
 echo "[IR 7] Index round-trip: reference extraction"
@@ -177,25 +203,29 @@ else
 fi
 rm -f $TMP_DIR/mb_ir_t1* 2>/dev/null || true
 
-# Test 10: Low-memory index produces usable output
+# Test 10: Low-memory index produces usable output (GPL only)
 echo "[IR 10] Low-memory index produces usable mapping"
-"$BINARY" index -l "$DATA_DIR/chrM-human.fa.gz" $TMP_DIR/mb_ir_lm > /dev/null 2>&1
-if [ -f "$TMP_DIR/mb_ir_lm.l2b" ] && [ -f "$TMP_DIR/mb_ir_lm.mbw" ]; then
-    "$BINARY" map $TMP_DIR/mb_ir_lm "$DATA_DIR/chrM-read_1.fa.gz" > $TMP_DIR/mb_ir_lm_out.sam 2>/dev/null
-    if [ -f "$TMP_DIR/mb_ir_lm_out.sam" ]; then
-        lines=$(wc -l < $TMP_DIR/mb_ir_lm_out.sam)
-        if [ "$lines" -gt 2 ]; then
-            pass "Low-memory index produces usable output ($lines lines)"
+if [ "$GPL_SUPPORT" -eq 0 ]; then
+    skip "index -l requires the GPL BWT builder (built with gpl=0)"
+else
+    "$BINARY" index -l "$DATA_DIR/chrM-human.fa.gz" "$TMP_DIR/mb_ir_lm" > /dev/null 2>&1
+    if [ -f "$TMP_DIR/mb_ir_lm.l2b" ] && [ -f "$TMP_DIR/mb_ir_lm.mbw" ]; then
+        "$BINARY" map "$TMP_DIR/mb_ir_lm" "$DATA_DIR/chrM-read_1.fa.gz" > "$TMP_DIR/mb_ir_lm_out.sam" 2>/dev/null
+        if [ -f "$TMP_DIR/mb_ir_lm_out.sam" ]; then
+            lines=$(wc -l < "$TMP_DIR/mb_ir_lm_out.sam")
+            if [ "$lines" -gt 2 ]; then
+                pass "Low-memory index produces usable output ($lines lines)"
+            else
+                fail "Low-memory index produced too few lines: $lines"
+            fi
         else
-            fail "Low-memory index produced too few lines: $lines"
+            fail "Low-memory index mapping produced no output"
         fi
     else
-        fail "Low-memory index mapping produced no output"
+        fail "Low-memory index did not produce required files"
     fi
-else
-    fail "Low-memory index did not produce required files"
 fi
-rm -f $TMP_DIR/mb_ir_lm* $TMP_DIR/mb_ir_lm_out.sam 2>/dev/null || true
+rm -f "$TMP_DIR"/mb_ir_lm* "$TMP_DIR"/mb_ir_lm_out.sam 2>/dev/null || true
 
 # Cleanup
 echo ""
@@ -208,6 +238,7 @@ echo " Index Routine Test Summary"
 echo "============================================"
 echo -e " \033[0;32m$PASS\033[0m passed"
 echo -e " \033[0;31m$FAIL\033[0m failed"
+echo -e " \033[1;33m$SKIP\033[0m skipped"
 echo "============================================"
 
 if [ "$FAIL" -gt 0 ]; then
