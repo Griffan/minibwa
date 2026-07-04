@@ -63,7 +63,7 @@ fi
 
 # Test 2: genbwt - generate BWT from .l2b
 echo "[IR 2] genbwt: generate BWT+SSA from long-2bit"
-"$BINARY" genbwt $TMP_DIR/mb_ir_fa2bit $TMP_DIR/mb_ir_fa2bit.mbw > /dev/null 2>&1
+"$BINARY" genbwt "$TMP_DIR/mb_ir_fa2bit" "$TMP_DIR/mb_ir_fa2bit.mbw" > /dev/null 2>&1
 if [ -f "$TMP_DIR/mb_ir_fa2bit.mbw" ]; then
     pass "genbwt creates .mbw file"
     size=$(stat -c%s "$TMP_DIR/mb_ir_fa2bit.mbw" 2>/dev/null || stat -f%z "$TMP_DIR/mb_ir_fa2bit.mbw" 2>/dev/null)
@@ -78,7 +78,7 @@ fi
 
 # Test 3: genbwt with different thread counts
 echo "[IR 3] genbwt with multi-threading"
-"$BINARY" genbwt -t2 $TMP_DIR/mb_ir_fa2bit $TMP_DIR/mb_ir_fa2bit_t.mbw > /dev/null 2>&1
+"$BINARY" genbwt -t2 "$TMP_DIR/mb_ir_fa2bit" "$TMP_DIR/mb_ir_fa2bit_t.mbw" > /dev/null 2>&1
 if [ -f "$TMP_DIR/mb_ir_fa2bit_t.mbw" ]; then
     pass "genbwt multi-thread creates .mbw"
 else
@@ -163,10 +163,10 @@ rm -f "$TMP_DIR"/mb_ir_gensa* 2>/dev/null || true
 
 # Test 7: Verify index round-trip (index -> map -> getref -> compare)
 echo "[IR 7] Index round-trip: reference extraction"
-"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" $TMP_DIR/mb_ir_roundtrip > /dev/null 2>&1
+"$BINARY" index "$DATA_DIR/chrM-human.fa.gz" "$TMP_DIR/mb_ir_roundtrip" > /dev/null 2>&1
 if [ -f "$TMP_DIR/mb_ir_roundtrip.l2b" ]; then
     # Extract reference from .l2b
-    "$BINARY" getref $TMP_DIR/mb_ir_roundtrip.l2b > $TMP_DIR/mb_ir_ref_extracted.fa 2>/dev/null
+    "$BINARY" getref "$TMP_DIR/mb_ir_roundtrip.l2b" > "$TMP_DIR/mb_ir_ref_extracted.fa" 2>/dev/null
     if [ -f "$TMP_DIR/mb_ir_ref_extracted.fa" ]; then
         # Compare first line of FASTA header
         orig_header=$(zcat "$DATA_DIR/chrM-human.fa.gz" | head -1)

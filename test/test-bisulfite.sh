@@ -11,11 +11,11 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DATA_DIR="$SCRIPT_DIR/data"
 # Temporary directory for test output files.
 # Uses $TMPDIR if set, otherwise falls back to a local subdirectory.
-TMP_DIR="${TMPDIR:-$SCRIPT_DIR}/_minibwa_test_tmp"
+TMP_DIR="${TMPDIR:-$SCRIPT_DIR}/_minibwa_test_tmp.$$"
 mkdir -p "$TMP_DIR"
 BINARY="${1:-$REPO_DIR/minibwa}"
 REF_FA="${2:-$DATA_DIR/chrM-human.fa.gz}"
-TEST_PREFIX="bs-test-$$"
+TEST_PREFIX="$TMP_DIR/bs-test-$$"
 PASS=0
 FAIL=0
 SKIP=0
