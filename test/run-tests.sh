@@ -25,7 +25,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 pass() { PASS=$((PASS + 1)); echo -e "  ${GREEN}PASS${NC}: $1"; }
-fail() { FAIL=$((FAIL + 1)); if [ -n "${2:-}" ]; then echo -e "  ${RED}FAIL${NC}: $1 ($2)"; else echo -e "  ${RED}FAIL${NC}: $1"; fi }
+fail() { FAIL=$((FAIL + 1)); if [ -n "${2:-}" ]; then echo -e "  ${RED}FAIL${NC}: $1 ($2)"; else echo -e "  ${RED}FAIL${NC}: $1"; fi; }
 skip() { SKIP=$((SKIP + 1)); echo -e "  ${YELLOW}SKIP${NC}: $1"; }
 
 assert_exit_code() {

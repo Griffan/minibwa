@@ -27,7 +27,7 @@ if [ ! -x "$BINARY" ]; then
     exit 1
 fi
 pass() { PASS=$((PASS + 1)); echo -e "  \033[0;32mPASS\033[0m: $1"; }
-fail() { FAIL=$((FAIL + 1)); if [ -n "${2:-}" ]; then echo -e "  \033[0;31mFAIL\033[0m: $1 ($2)"; else echo -e "  \033[0;31mFAIL\033[0m: $1"; fi }
+fail() { FAIL=$((FAIL + 1)); if [ -n "${2:-}" ]; then echo -e "  \033[0;31mFAIL\033[0m: $1 ($2)"; else echo -e "  \033[0;31mFAIL\033[0m: $1"; fi; }
 skip() { SKIP=$((SKIP + 1)); echo -e "  \033[1;33mSKIP\033[0m: $1"; }
 
 echo "============================================"
